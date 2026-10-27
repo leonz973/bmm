@@ -35,6 +35,7 @@ export const PageRoutes = {
     USERS: '/admin/user/list',
     AI_PROVIDER: '/admin/ai-provider',
     SITE_SETTING: '/admin/site-setting',
+    PUBLIC_REQUESTS: '/admin/public-requests',
     tagSlug: (slug?: 'new' | TagId | 'list') => '/admin/tag/' + (slug || ''),
     bookmarkSlug: (slug: 'new' | 'list' | BookmarkId) => '/admin/bookmark/' + slug,
   },
@@ -170,6 +171,13 @@ export const ADMIN_NAV_LINKS = [
     icon: IconNames.Tabler.BOOKMARK,
     description: '筛选、排序并维护全部公共书签',
     accent: 'from-sky-400 via-cyan-400 to-blue-500',
+  },
+  {
+    label: '公开审核',
+    href: PageRoutes.Admin.PUBLIC_REQUESTS,
+    icon: IconNames.Tabler.UPLOAD,
+    description: '审核用户提交的公开书签申请',
+    accent: 'from-emerald-300 via-teal-400 to-cyan-500',
   },
   {
     label: '新建书签',

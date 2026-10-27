@@ -3,6 +3,7 @@
 import {
   actBatchCheckPublicBookmarkHosts,
   actBatchCheckUserBookmarkHosts,
+  actCancelBookmarkPublish,
   actCheckPublicBookmarkHost,
   actCheckUserBookmarkHost,
   actDeletePublicBookmark,
@@ -13,6 +14,7 @@ import {
   actFindUserBookmarks,
   actGetPublicBookmarkHostCheckTask,
   actGetUserBookmarkHostCheckTask,
+  actRequestBookmarkPublish,
   actStartPublicBookmarkHostCheckTask,
   actStartUserBookmarkHostCheckTask,
   actUpdatePublicBookmark,
@@ -26,7 +28,7 @@ import MyModal from '@/components/MyModal'
 import ReButton from '@/components/re-export/ReButton'
 import ReInput from '@/components/re-export/ReInput'
 import { PaginationControls } from '@/components/ui'
-import type { CheckHostsTaskValue } from '@/controllers'
+import type { CheckHostsTaskValue, PublishStatus, SelectUserBookmark } from '@/controllers'
 import { findManyBookmarksSchema } from '@/controllers/schemas'
 import { usePageUtil } from '@/hooks'
 import { runAction } from '@/utils/client'
@@ -54,6 +56,7 @@ import {
   TableRow,
   Tooltip,
 } from '@heroui/react'
+import { useSession } from 'next-auth/react'
 import { useDebounceFn, useRequest, useSetState, useUpdateEffect } from 'ahooks'
 import { Progress } from 'antd'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -104,8 +107,13 @@ export type BookmarkListPageProps = {
   tags: SelectTag[]
 }
 
+type BookmarkRow = SelectBookmark &
+  Partial<Pick<SelectUserBookmark, 'publishStatus' | 'publishRejectReason'>>
+
 export default function BookmarkListPage(props: BookmarkListPageProps) {
   const isUserSpace = usePageUtil().isUserSpace
+  const { data: session } = useSession()
+  const isAdmin = Boolean(session?.user?.isAdmin)
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
@@ -135,6 +143,7 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
     selectedKeys: new Set<BookmarkId>() as Selection,
     isBatchDeleting: false,
     isBatchChecking: false,
+    publishingId: null as BookmarkId | null,
   })
   const dataRef = useRef({ loadingMutable: true })
   const taskRunningRef = useRef(false)
@@ -251,11 +260,17 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
   )
 
   async function onRemove(item: SelectBookmark) {
-    const action = isUserSpace ? actDeleteUserBookmark : actDeletePublicBookmark
-    await runAction(action({ id: item.id }), {
-      okMsg: '书签已删除',
-      onOk: refresh,
-    })
+    if (isUserSpace) {
+      await runAction(actDeleteUserBookmark({ id: item.id }), {
+        okMsg: '书签已删除',
+        onOk: refresh,
+      })
+    } else {
+      await runAction(actDeletePublicBookmark({ id: item.id }), {
+        okMsg: '书签已删除',
+        onOk: refresh,
+      })
+    }
   }
 
   const isAllSelected = state.selectedKeys === 'all'
@@ -267,15 +282,24 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
   async function onBatchDelete() {
     const ids = selectedIds
     if (!ids.length) return
-    const action = isUserSpace ? actDeleteUserBookmarks : actDeletePublicBookmarks
     setState({ isBatchDeleting: true })
-    await runAction(action({ ids }), {
-      okMsg: '书签已批量删除',
-      onOk: () => {
-        setState({ selectedKeys: new Set<BookmarkId>() })
-        refresh()
-      },
-    })
+    if (isUserSpace) {
+      await runAction(actDeleteUserBookmarks({ ids }), {
+        okMsg: '书签已批量删除',
+        onOk: () => {
+          setState({ selectedKeys: new Set<BookmarkId>() })
+          refresh()
+        },
+      })
+    } else {
+      await runAction(actDeletePublicBookmarks({ ids }), {
+        okMsg: '书签已批量删除',
+        onOk: () => {
+          setState({ selectedKeys: new Set<BookmarkId>() })
+          refresh()
+        },
+      })
+    }
     setState({ isBatchDeleting: false })
   }
 
@@ -330,6 +354,51 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
       onOk: refresh,
     })
     setState({ checkingId: null })
+  }
+
+  async function onRequestPublish(item: BookmarkRow) {
+    const isPending = item.publishStatus === 'pending'
+    setState({ publishingId: item.id })
+    if (isPending) {
+      await runAction(actCancelBookmarkPublish({ id: item.id }), {
+        okMsg: '已撤回公开申请',
+        onOk: refresh,
+      })
+    } else {
+      await runAction(actRequestBookmarkPublish({ id: item.id }), {
+        okMsg: isAdmin ? '已直接公开到公共首页' : '已提交公开申请，等待管理员审核',
+        onOk: refresh,
+      })
+    }
+    setState({ publishingId: null })
+  }
+
+  function renderPublishStatus(item: BookmarkRow) {
+    const status: PublishStatus = item.publishStatus || 'private'
+    const config = {
+      private: { label: '申请公开', color: 'primary' as const, tooltip: '提交到公共首页' },
+      pending: { label: '审核中', color: 'warning' as const, tooltip: '点击撤回公开申请' },
+      public: { label: '已公开', color: 'success' as const, tooltip: '已在公共首页展示' },
+      rejected: {
+        label: '重新申请',
+        color: 'danger' as const,
+        tooltip: item.publishRejectReason || '申请未通过，可重新提交',
+      },
+    }[status]
+
+    return (
+      <ReButton
+        size="sm"
+        variant="flat"
+        color={config.color}
+        tooltip={config.tooltip}
+        isLoading={state.publishingId === item.id}
+        isDisabled={status === 'public'}
+        onPress={() => onRequestPublish(item)}
+      >
+        {config.label}
+      </ReButton>
+    )
   }
 
   async function onStartCheckHostsTask() {
@@ -631,9 +700,10 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
             <TableColumn className="w-[16%] min-w-24">关联标签</TableColumn>
             <TableColumn className="w-[18%] min-w-24">检测状态</TableColumn>
             <TableColumn className="w-16">置顶</TableColumn>
+            <TableColumn className={isUserSpace ? 'w-24' : 'hidden'}>公开</TableColumn>
             <TableColumn className="w-28">操作</TableColumn>
           </TableHeader>
-          <TableBody<SelectBookmark>
+          <TableBody<BookmarkRow>
             items={state.loading ? [] : bookmarks}
             isLoading={state.loading}
             loadingContent={<Spinner className="mt-12" label="Loading..." />}
@@ -684,6 +754,9 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
                       isSelected={item.isPinned || false}
                       onValueChange={(v) => onChangeIsPinned(item, v)}
                     />
+                  </TableCell>
+                  <TableCell className={isUserSpace ? '' : 'hidden'}>
+                    <div className="flex w-24 items-center">{renderPublishStatus(item)}</div>
                   </TableCell>
                   <TableCell>
                     <div className="flex w-28 items-center">

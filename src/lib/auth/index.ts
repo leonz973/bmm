@@ -1,8 +1,9 @@
+import SiteSettingController from '@/controllers/SiteSetting.controller'
 import UserController from '@/controllers/User.controller'
 import { db, schema } from '@/db'
 import { DrizzleAdapter } from '@auth/drizzle-adapter'
 import NextAuth, { NextAuthConfig } from 'next-auth'
-import { authConfig } from './config'
+import { createAuthConfig } from './config'
 
 const adapter = DrizzleAdapter(db, {
   usersTable: schema.users,
@@ -15,16 +16,21 @@ const adapter = DrizzleAdapter(db, {
 // ! 首个新用户设为管理员权限
 const originCreateUser = adapter.createUser!
 adapter.createUser = async (data) => {
-  if ((await UserController.count()) === 0) {
+  const userCount = await UserController.count()
+  if (userCount > 0 && !(await SiteSettingController.isRegisterAllowed())) {
+    throw new Error('当前站点未开放新用户注册')
+  }
+  if (userCount === 0) {
     data.role = 'admin'
   }
   return originCreateUser(data)
 }
 
-const nextAuthOptions: NextAuthConfig = {
-  ...authConfig,
+// 每次请求重新读取站点配置，让后台的 GitHub 登录开关即时生效
+const nextAuthOptions = async (): Promise<NextAuthConfig> => ({
+  ...createAuthConfig(await SiteSettingController.getGithubProviderConfig()),
   adapter,
-}
+})
 
 export const nextAuthLib = NextAuth(nextAuthOptions)
 

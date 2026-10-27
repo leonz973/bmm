@@ -71,6 +71,15 @@ export const userBookmarks = pgTable(
     pinyin: varchar('pinyin', { length: FieldConstraints.MaxLen.DEFAULT }),
     description: varchar('description', { length: FieldConstraints.MaxLen.BOOKMARK_DESC }),
     isPinned: boolean('isPinned'),
+    publishStatus: varchar('publishStatus', { length: 20 })
+      .$type<'private' | 'pending' | 'public' | 'rejected'>()
+      .notNull()
+      .default('private'),
+    publishRequestedAt: timestamp('publishRequestedAt', { mode: 'date' }),
+    publishedAt: timestamp('publishedAt', { mode: 'date' }),
+    publishRejectReason: varchar('publishRejectReason', {
+      length: FieldConstraints.MaxLen.BOOKMARK_DESC,
+    }),
     createdAt: timestamp('createdAt', { mode: 'date' })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -152,6 +161,10 @@ export const userTagToTagRelations = relations(userTagToTag, (ctx) => {
 
 export const userBookmarkRelations = relations(userBookmarks, (ctx) => ({
   relatedTagIds: ctx.many(userBookmarkToTag),
+  user: ctx.one(users, {
+    fields: [userBookmarks.userId],
+    references: [users.id],
+  }),
 }))
 
 export const userBookmarkToTagRelations = relations(userBookmarkToTag, (ctx) => ({

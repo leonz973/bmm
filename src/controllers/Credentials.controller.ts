@@ -2,6 +2,7 @@ import { db, schema } from '@/db'
 import { z, zodSchemas } from '@/lib/zod'
 import crypto from 'crypto'
 import { and, eq } from 'drizzle-orm'
+import SiteSettingController from './SiteSetting.controller'
 import UserController from './User.controller'
 
 // 使用 pbkdf2 算法生成哈希，1000 轮迭代，32 字节长度的密钥
@@ -30,8 +31,14 @@ const CredentialsController = {
   // 注册时，创建账户
   async create(payload: z.infer<typeof zodSchemas.userCredential>) {
     const { email, password } = zodSchemas.userCredential.parse(payload)
-    const count = await db.$count(schema.users, eq(schema.users.email, email))
-    if (count > 0) throw new Error('邮箱已被注册使用')
+    const emailCount = await db.$count(schema.users, eq(schema.users.email, email))
+    if (emailCount > 0) throw new Error('邮箱已被注册使用')
+
+    const userCount = await UserController.count()
+    if (userCount > 0 && !(await SiteSettingController.isRegisterAllowed())) {
+      throw new Error('当前站点未开放新用户注册')
+    }
+
     const { hash, salt } = saltAndHashPassword(password)
     const [user] = await db
       .insert(schema.users)
@@ -39,7 +46,7 @@ const CredentialsController = {
         email: email,
         name: email.split('@').shift(),
         // ! 首个新用户设为管理员权限
-        role: (await UserController.count()) === 0 ? 'admin' : 'user',
+        role: userCount === 0 ? 'admin' : 'user',
       })
       .returning()
     await Promise.all([

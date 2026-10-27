@@ -11,6 +11,7 @@ import BookmarkHostCheckController, {
   withBookmarkHostCheckSummaries,
 } from './BookmarkHostCheck.controller'
 import { createBookmarkFilterByKeyword } from './common'
+import BookmarkPublicationController from './BookmarkPublication.controller'
 import { findManyBookmarksSchema } from './schemas'
 import UserTagController from './UserTag.controller'
 
@@ -21,6 +22,8 @@ interface TagIdsExt {
 }
 type InsertBookmark = Partial<TagIdsExt> & Omit<typeof userBookmarks.$inferInsert, 'id' | 'userId'>
 type SelectUserBookmark = BookmarkHostCheckSummary & TagIdsExt & typeof userBookmarks.$inferSelect
+
+export type { SelectUserBookmark }
 
 /**
  * 完全更新 PublicBookmarkToTag 表，使与 bId 关联关联的 tId 全是 tagIds 中的 id
@@ -122,6 +125,22 @@ const UserBookmarkController = {
       hostCheckErrorMessage,
       ...resetBookmark
     } = bookmark
+    const userId = await getAuthedUserId()
+    const exists = await db.query.userBookmarks.findFirst({
+      where: userLimiter(userId, id),
+      columns: { id: true },
+    })
+    if (!exists) throw new Error('书签不存在')
+    if (resetBookmark.name || resetBookmark.url) {
+      await BookmarkPublicationController.assertCanSync(
+        id,
+        {
+          name: resetBookmark.name,
+          url: resetBookmark.url,
+        },
+        userId
+      )
+    }
     const tasks = []
     tasks.push(fullSetBookmarkToTag(id, relatedTagIds))
     if (Object.keys(resetBookmark).length) {
@@ -138,21 +157,25 @@ const UserBookmarkController = {
             ...resetBookmark,
             updatedAt: new Date(),
           })
-          .where(userLimiter(await getAuthedUserId(), id))
+          .where(userLimiter(userId, id))
           .returning()
       )
     }
     await Promise.all(tasks)
+    await BookmarkPublicationController.syncAfterUpdate(id)
   },
   async delete(bookmark: Pick<SelectUserBookmark, 'id'>) {
+    const userId = await getAuthedUserId()
+    await BookmarkPublicationController.removePublicCopy(bookmark.id, userId)
     const res = await db
       .delete(userBookmarks)
-      .where(userLimiter(await getAuthedUserId(), bookmark.id))
+      .where(userLimiter(userId, bookmark.id))
       .returning()
     return res
   },
   async removeMany({ ids }: { ids: BookmarkId[] }) {
     const userId = await getAuthedUserId()
+    await BookmarkPublicationController.removePublicCopies(ids, userId)
     const res = await db
       .delete(userBookmarks)
       .where(and(userLimiter(userId), inArray(userBookmarks.id, ids)))

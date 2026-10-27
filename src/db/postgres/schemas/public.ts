@@ -1,5 +1,6 @@
 import { FieldConstraints } from '@cfg'
 import { relations } from 'drizzle-orm'
+import { userBookmarks } from './user'
 import {
   alias,
   boolean,
@@ -74,6 +75,9 @@ export const publicBookmarks = pgTable('publicBookmarks', {
   pinyin: varchar('pinyin', { length: FieldConstraints.MaxLen.DEFAULT }),
   description: varchar('description', { length: FieldConstraints.MaxLen.BOOKMARK_DESC }),
   isPinned: boolean('isPinned'),
+  sourceUserBookmarkId: integer('sourceUserBookmarkId')
+    .unique()
+    .references(() => userBookmarks.id, { onDelete: 'cascade' }),
   createdAt: timestamp('createdAt', { mode: 'date' })
     .notNull()
     .$defaultFn(() => new Date()),

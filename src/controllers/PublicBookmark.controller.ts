@@ -13,13 +13,15 @@ import { createBookmarkFilterByKeyword } from './common'
 import PublicTagController from './PublicTag.controller'
 import { findManyBookmarksSchema } from './schemas'
 
-const { publicBookmarkToTag, publicBookmarks } = schema
+const { publicBookmarkToTag, publicBookmarks, userBookmarks } = schema
 
 interface TagIdsExt {
   relatedTagIds: TagId[]
 }
 export type InsertPublicBookmark = Partial<TagIdsExt> & typeof publicBookmarks.$inferInsert
-type SelectBookmark = BookmarkHostCheckSummary & TagIdsExt & typeof publicBookmarks.$inferSelect
+type SelectBookmark = BookmarkHostCheckSummary &
+  TagIdsExt &
+  Omit<typeof publicBookmarks.$inferSelect, 'sourceUserBookmarkId'>
 export type { SelectBookmark as SelectPublicBookmark }
 
 /**
@@ -69,6 +71,27 @@ async function createFindManyFilters(query: z.output<typeof findManyBookmarksSch
     filters.push(hostCheckFilter)
   }
   return filters.length ? and(...filters) : undefined
+}
+
+async function resetSourcePublishStatus(publicBookmarkIds: BookmarkId[]) {
+  if (!publicBookmarkIds.length) return
+  const rows = await db
+    .select({ sourceUserBookmarkId: publicBookmarks.sourceUserBookmarkId })
+    .from(publicBookmarks)
+    .where(inArray(publicBookmarks.id, publicBookmarkIds))
+  const sourceIds = rows
+    .map((row) => row.sourceUserBookmarkId)
+    .filter((id): id is number => id !== null)
+  if (!sourceIds.length) return
+  await db
+    .update(userBookmarks)
+    .set({
+      publishStatus: 'private',
+      publishRequestedAt: null,
+      publishedAt: null,
+      publishRejectReason: null,
+    })
+    .where(inArray(userBookmarks.id, sourceIds))
 }
 
 const PublicBookmarkController = {
@@ -135,6 +158,7 @@ const PublicBookmarkController = {
     return res.pop()
   },
   async delete(bookmark: Pick<SelectBookmark, 'id'>) {
+    await resetSourcePublishStatus([bookmark.id])
     const res = await db
       .delete(publicBookmarks)
       .where(eq(publicBookmarks.id, bookmark.id))
@@ -142,6 +166,7 @@ const PublicBookmarkController = {
     return res
   },
   async removeMany({ ids }: { ids: BookmarkId[] }) {
+    await resetSourcePublishStatus(ids)
     const res = await db
       .delete(publicBookmarks)
       .where(inArray(publicBookmarks.id, ids))

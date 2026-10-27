@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm'
 import { alias, index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { userBookmarks } from './user'
 
 /**
  * 公共标签表
@@ -49,6 +50,9 @@ export const publicBookmarks = sqliteTable('publicBookmarks', {
   pinyin: text('pinyin'),
   description: text('description'),
   isPinned: integer('isPinned', { mode: 'boolean' }),
+  sourceUserBookmarkId: integer('sourceUserBookmarkId')
+    .unique()
+    .references(() => userBookmarks.id, { onDelete: 'cascade' }),
   createdAt: integer('createdAt', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),

@@ -2,6 +2,7 @@
 
 import {
   AiProviderController,
+  BookmarkPublicationController,
   CredentialsController,
   PublicBookmarkController,
   PublicTagController,
@@ -11,13 +12,17 @@ import {
   UserReadLaterController,
   UserTagController,
   aiProvidersConfigSchema,
+  bookmarkPublishInputSchema,
   deletePublicTagsSchema,
   deleteUserTagsSchema,
   duplicateAiProviderSchema,
+  findBookmarkPublishRequestsSchema,
   listAiProviderModelsSchema,
   createReadLaterItemSchema,
   findManyReadLaterItemsSchema,
   readLaterItemIdSchema,
+  reviewBookmarkPublishSchema,
+  siteAuthConfigSchema,
   siteProxyConfigSchema,
   testAiProviderSchema,
   updateReadLaterItemSchema,
@@ -25,7 +30,6 @@ import {
 import {
   aiAnalyzeRelatedTagsInput,
   aiAnalyzeWebsiteInput,
-  checkGithubOAuthConfig,
   deleteUserInput,
   extractHtmlInfoInput,
   updateUserProfileInput,
@@ -89,6 +93,22 @@ export const actBatchCheckUserBookmarkHosts = make(UserBookmarkController.batchC
 export const actStartUserBookmarkHostCheckTask = make(UserBookmarkController.startCheckHostsTask)
 export const actGetUserBookmarkHostCheckTask = make(UserBookmarkController.getCheckHostsTask)
 
+/// BookmarkPublication
+export const actRequestBookmarkPublish = make(BookmarkPublicationController.request, {
+  schema: bookmarkPublishInputSchema,
+})
+export const actCancelBookmarkPublish = make(BookmarkPublicationController.cancel, {
+  schema: bookmarkPublishInputSchema,
+})
+export const actFindBookmarkPublishRequests = make(BookmarkPublicationController.findMany, {
+  guard: 'admin',
+  schema: findBookmarkPublishRequestsSchema,
+})
+export const actReviewBookmarkPublish = make(BookmarkPublicationController.review, {
+  guard: 'admin',
+  schema: reviewBookmarkPublishSchema,
+})
+
 /// UserReadLater
 export const actCreateReadLaterItem = make(UserReadLaterController.createFromUrl, {
   schema: createReadLaterItemSchema,
@@ -136,6 +156,16 @@ export const actSaveSiteProxyConfig = make(SiteSettingController.saveConfig, {
   guard: 'admin',
   schema: siteProxyConfigSchema,
 })
+export const actGetSiteAuthConfig = make(SiteSettingController.getSafeAuthConfig, {
+  guard: 'admin',
+})
+export const actSaveSiteAuthConfig = make(SiteSettingController.saveAuthConfig, {
+  guard: 'admin',
+  schema: siteAuthConfigSchema,
+})
+export const actGetPublicAuthConfig = make(SiteSettingController.getPublicAuthConfig, {
+  guard: false,
+})
 
 /// 解析网站、标签
 export const actExtractHtmlInfo = make(extractHtmlInfoInput)
@@ -146,5 +176,3 @@ export const actAnalyzeRelatedTags = make(aiAnalyzeRelatedTagsInput)
 export const actRegisterUser = make(CredentialsController.create, { guard: false })
 export const actVerifyUser = make(CredentialsController.verify, { guard: false })
 export const actUpdateUserProfile = make(updateUserProfileInput)
-
-export const actCheckGithubOAuthConfig = make(checkGithubOAuthConfig, { guard: false })

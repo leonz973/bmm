@@ -59,6 +59,14 @@ export const userBookmarks = sqliteTable(
     pinyin: text('pinyin'),
     description: text('description'),
     isPinned: integer('isPinned', { mode: 'boolean' }),
+    publishStatus: text('publishStatus', {
+      enum: ['private', 'pending', 'public', 'rejected'],
+    })
+      .notNull()
+      .default('private'),
+    publishRequestedAt: integer('publishRequestedAt', { mode: 'timestamp' }),
+    publishedAt: integer('publishedAt', { mode: 'timestamp' }),
+    publishRejectReason: text('publishRejectReason'),
     createdAt: integer('createdAt', { mode: 'timestamp' })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -140,6 +148,10 @@ export const userTagToTagRelations = relations(userTagToTag, (ctx) => {
 
 export const userBookmarkRelations = relations(userBookmarks, (ctx) => ({
   relatedTagIds: ctx.many(userBookmarkToTag),
+  user: ctx.one(users, {
+    fields: [userBookmarks.userId],
+    references: [users.id],
+  }),
 }))
 
 export const userBookmarkToTagRelations = relations(userBookmarkToTag, (ctx) => ({

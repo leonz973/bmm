@@ -135,14 +135,7 @@ export default function BookmarkSlugPage(props: BookmarkSlugPageProps) {
 
   async function onSave() {
     if (!validateAll()) return
-    const action = slug.isNew
-      ? pageUtil.isAdminSpace
-        ? actInsertPublicBookmark(bookmark)
-        : actInsertUserBookmark(bookmark)
-      : pageUtil.isAdminSpace
-        ? actUpdatePublicBookmark({ ...bookmark, id: slug.number! })
-        : actUpdateUserBookmark({ ...bookmark, id: slug.number! })
-    await runAction(action, {
+    const options = {
       okMsg: slug.isNew ? '书签已创建' : '书签已更新',
       async onOk() {
         await props.afterSave()
@@ -150,9 +143,21 @@ export default function BookmarkSlugPage(props: BookmarkSlugPageProps) {
           ? PageRoutes.Admin.bookmarkSlug('list')
           : PageRoutes.User.bookmarkSlug('list')
         router.push(route)
-        console.log({ route })
       },
-    })
+    }
+    if (slug.isNew) {
+      if (pageUtil.isAdminSpace) {
+        await runAction(actInsertPublicBookmark(bookmark), options)
+      } else {
+        await runAction(actInsertUserBookmark(bookmark), options)
+      }
+      return
+    }
+    if (pageUtil.isAdminSpace) {
+      await runAction(actUpdatePublicBookmark({ ...bookmark, id: slug.number! }), options)
+    } else {
+      await runAction(actUpdateUserBookmark({ ...bookmark, id: slug.number! }), options)
+    }
   }
 
   function renderParseWebsiteDropdown() {

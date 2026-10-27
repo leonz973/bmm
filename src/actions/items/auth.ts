@@ -4,10 +4,6 @@ import { z, zodSchemas } from '@/lib/zod'
 import { robustUrl } from '@/utils'
 import { makeActionInput } from '../make-action'
 
-export async function checkGithubOAuthConfig() {
-  return !!(process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET)
-}
-
 const deleteUserSchema = z.object({
   id: z.string(),
 })

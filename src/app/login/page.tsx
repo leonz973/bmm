@@ -1,6 +1,6 @@
 'use client'
 
-import { actCheckGithubOAuthConfig, actRegisterUser, actVerifyUser } from '@/actions'
+import { actGetPublicAuthConfig, actRegisterUser, actVerifyUser } from '@/actions'
 import ReButton from '@/components/re-export/ReButton'
 import ReInput from '@/components/re-export/ReInput'
 import { z, zodSchemas } from '@/lib/zod'
@@ -26,6 +26,8 @@ export default function Page() {
     isRedirecting: false,
     isRegisterMode: false,
     loginRegisterLoading: false,
+    allowRegister: false,
+    githubEnabled: false,
     authError: null as null | { title: string; desc: string },
   })
   const [validationErrors, setValidationErrors] = useState<FormProps['validationErrors']>()
@@ -42,12 +44,23 @@ export default function Page() {
     } else if (error === 'OAuthAccountNotLinked') {
       authError.title = '登录失败'
       authError.desc = 'Github 账户邮箱已被注册，请直接使用账号密码登录，或更换 Github 账户。'
+    } else if (error === 'AccessDenied') {
+      authError.title = '登录失败'
+      authError.desc = '当前站点未开放新用户注册，请联系管理员。'
     } else if (error === 'Configuration') {
       authError.title = '登录失败'
       authError.desc =
         '若您正在进行 Github 授权，可能是服务端请求 Github 服务器超时，可多次重试。若问题持续存在，请联系管理员查看服务日志或应用配置。'
     }
     authError.title && setState({ authError })
+
+    void runAction(actGetPublicAuthConfig()).then((res) => {
+      if (!res.ok) return
+      setState({
+        allowRegister: res.data.allowRegister,
+        githubEnabled: res.data.githubEnabled,
+      })
+    })
   })
 
   // 登录成功后，根据用户角色重定向到不同的页面
@@ -59,15 +72,6 @@ export default function Page() {
   }
 
   async function handleGithubAuth() {
-    const res = await runAction(actCheckGithubOAuthConfig())
-    if (!res.ok) return
-    if (!res.data) {
-      addToast({
-        color: 'danger',
-        description: '由于服务端配置缺失，暂无法使用 Github 登录，可尝试账号密码登录',
-      })
-      return
-    }
     await signIn('github')
     setState({ isRedirecting: true })
   }
@@ -190,15 +194,17 @@ export default function Page() {
                   />
                 )}
                 <div className="mt-4">
-                  <ReButton buttonType="link" type="button" size="sm" onPress={toggleRegisterMode}>
-                    <span
-                      className={cn(IconNames.Tabler.ARROW_LEFT, !state.isRegisterMode && 'hidden')}
-                    />
-                    <span>{state.isRegisterMode ? '返回登录' : '还没有账号？注册'}</span>
-                    <span
-                      className={cn(IconNames.Tabler.ARROW_RIGHT, state.isRegisterMode && 'hidden')}
-                    />
-                  </ReButton>
+                  {state.allowRegister && (
+                    <ReButton buttonType="link" type="button" size="sm" onPress={toggleRegisterMode}>
+                      <span
+                        className={cn(IconNames.Tabler.ARROW_LEFT, !state.isRegisterMode && 'hidden')}
+                      />
+                      <span>{state.isRegisterMode ? '返回登录' : '还没有账号？注册'}</span>
+                      <span
+                        className={cn(IconNames.Tabler.ARROW_RIGHT, state.isRegisterMode && 'hidden')}
+                      />
+                    </ReButton>
+                  )}
                 </div>
                 <ReButton
                   type="submit"
@@ -211,21 +217,25 @@ export default function Page() {
                 </ReButton>
               </Form>
 
-              <div className="my-5 flex items-center gap-3">
-                <div className="bg-divider h-px flex-1" />
-                <span className="text-default-400 text-xs font-medium">或</span>
-                <div className="bg-divider h-px flex-1" />
-              </div>
+              {state.githubEnabled && (
+                <>
+                  <div className="my-5 flex items-center gap-3">
+                    <div className="bg-divider h-px flex-1" />
+                    <span className="text-default-400 text-xs font-medium">或</span>
+                    <div className="bg-divider h-px flex-1" />
+                  </div>
 
-              <ReButton
-                fullWidth
-                variant="bordered"
-                className="border-divider bg-content1 text-default-700 hover:bg-content2 h-11 rounded-xl font-medium shadow-sm shadow-black/5"
-                startContent={<span className={cn(IconNames.Mdi.GITHUB, 'text-xl')} />}
-                onClick={handleGithubAuth}
-              >
-                Github 授权登录
-              </ReButton>
+                  <ReButton
+                    fullWidth
+                    variant="bordered"
+                    className="border-divider bg-content1 text-default-700 hover:bg-content2 h-11 rounded-xl font-medium shadow-sm shadow-black/5"
+                    startContent={<span className={cn(IconNames.Mdi.GITHUB, 'text-xl')} />}
+                    onClick={handleGithubAuth}
+                  >
+                    Github 授权登录
+                  </ReButton>
+                </>
+              )}
 
               {state.authError && (
                 <div

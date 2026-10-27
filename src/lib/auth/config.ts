@@ -1,58 +1,76 @@
+import SiteSettingController from '@/controllers/SiteSetting.controller'
+import { db, schema } from '@/db'
 import { Assets, PageRoutes } from '@cfg'
+import { eq } from 'drizzle-orm'
 import { NextAuthConfig } from 'next-auth'
 import { credentialsProvider } from './credentials-provider'
-import { githubProvider } from './github-provider'
+import { createGithubProvider, GithubProviderConfig } from './github-provider'
 
 // 这里没有配置 adapter，是为了兼容边缘环境
 // https://authjs.dev/guides/edge-compatibility
-export const authConfig = {
-  // debug: true,
-  providers: [githubProvider, credentialsProvider],
-  // session 1 天内有效，超过 1 天会自动更新；超过 30 天内没有任何操作，就会过期，useSession() auth() 返回 null
-  session: { strategy: 'jwt', maxAge: 30 * 24 * 3600, updateAge: 24 * 3600 },
-  pages: { signIn: PageRoutes.LOGIN, error: PageRoutes.LOGIN },
-  theme: { logo: Assets.LOGO_SVG },
-  // debug: true,
-  callbacks: {
-    // signIn(params) {
-    //   console.log('[next-auth][callbacks.signIn]\n', params)
-    //   return true
-    // },
-    // redirect(params) {
-    //   console.log('[next-auth][callbacks.redirect]\n', params)
-    //   return params.url
-    // },
-    // authorized(params) {
-    //   console.log('[next-auth][callbacks.authorized]\n', params)
-    // },
-    jwt(params) {
-      // console.log('[next-auth][callbacks.jwt]\n', params)
-      if (params.user) {
-        params.token.name = params.user.name
-        params.token.email = params.user.email
-        params.token.picture = params.user.image
-        params.token.role = params.user.role
-      }
-      if (params.trigger === 'update' && params.session) {
-        params.token.name = params.session.name
-        params.token.picture = params.session.image
-      }
-      return params.token
+export function createAuthConfig(github: GithubProviderConfig | null) {
+  return {
+    // debug: true,
+    providers: [...(github ? [createGithubProvider(github)] : []), credentialsProvider],
+    // session 1 天内有效，超过 1 天会自动更新；超过 30 天内没有任何操作，就会过期，useSession() auth() 返回 null
+    session: { strategy: 'jwt', maxAge: 30 * 24 * 3600, updateAge: 24 * 3600 },
+    pages: { signIn: PageRoutes.LOGIN, error: PageRoutes.LOGIN },
+    theme: { logo: Assets.LOGO_SVG },
+    // debug: true,
+    callbacks: {
+      // 第三方登录首次创建用户时，同样受「允许新用户注册」开关限制
+      async signIn({ user, account }) {
+        if (account?.provider !== 'github') return true
+        if (!user.email) return false
+
+        const existingUser = await db.query.users.findFirst({
+          where: eq(schema.users.email, user.email),
+          columns: { id: true },
+        })
+        if (existingUser) return true
+
+        return await SiteSettingController.canRegisterNewUser()
+      },
+      // signIn(params) {
+      //   console.log('[next-auth][callbacks.signIn]\n', params)
+      //   return true
+      // },
+      // redirect(params) {
+      //   console.log('[next-auth][callbacks.redirect]\n', params)
+      //   return params.url
+      // },
+      // authorized(params) {
+      //   console.log('[next-auth][callbacks.authorized]\n', params)
+      // },
+      jwt(params) {
+        // console.log('[next-auth][callbacks.jwt]\n', params)
+        if (params.user) {
+          params.token.name = params.user.name
+          params.token.email = params.user.email
+          params.token.picture = params.user.image
+          params.token.role = params.user.role
+        }
+        if (params.trigger === 'update' && params.session) {
+          params.token.name = params.session.name
+          params.token.picture = params.session.image
+        }
+        return params.token
+      },
+      // 控制 auth() 返回的 Session 的数据
+      session(params) {
+        // console.log('[next-auth][callbacks.session]\n', params)
+        const session = params.session
+        if (session.user) {
+          // 这里的 params.token 是上面 jwt() 的返回
+          session.user.id = params.token.sub!
+          session.user.name = params.token.name || ''
+          session.user.email = params.token.email || ''
+          session.user.image = typeof params.token.picture === 'string' ? params.token.picture : null
+          session.user.role = params.token.role as typeof session.user.role
+          session.user.isAdmin = params.token.role === 'admin'
+        }
+        return params.session
+      },
     },
-    // 控制 auth() 返回的 Session 的数据
-    session(params) {
-      // console.log('[next-auth][callbacks.session]\n', params)
-      const session = params.session
-      if (session.user) {
-        // 这里的 params.token 是上面 jwt() 的返回
-        session.user.id = params.token.sub!
-        session.user.name = params.token.name || ''
-        session.user.email = params.token.email || ''
-        session.user.image = typeof params.token.picture === 'string' ? params.token.picture : null
-        session.user.role = params.token.role as typeof session.user.role
-        session.user.isAdmin = params.token.role === 'admin'
-      }
-      return params.session
-    },
-  },
-} satisfies NextAuthConfig
+  } satisfies NextAuthConfig
+}

@@ -1,4 +1,4 @@
-import type { SelectPublicBookmark, SelectPublicTag } from '@/controllers'
+import type { SelectPublicTag } from '@/controllers'
 import type { schema } from '@/db'
 import type { Metadata, ResolvingMetadata } from 'next'
 import 'next-auth'
@@ -48,7 +48,23 @@ declare global {
   /** publicTag / userTag 的公共类型 */
   export type SelectTag = SelectPublicTag
   /** publicBookmark / userBookmark 的公共类型 */
-  export type SelectBookmark = SelectPublicBookmark
+  export type SelectBookmark = {
+    id: number
+    name: string
+    url: string
+    hostKey: string | null
+    icon: string | null
+    pinyin: string | null
+    description: string | null
+    isPinned: boolean | null
+    createdAt: Date
+    updatedAt: Date
+    relatedTagIds: TagId[]
+    hostCheckStatus?: 'reachable' | 'unreachable' | 'unchecked'
+    hostCheckedAt?: Date | null
+    hostCheckHttpStatus?: number | null
+    hostCheckErrorMessage?: string | null
+  }
 }
 
 declare module 'next-auth' {

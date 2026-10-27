@@ -5,7 +5,11 @@
 
 
 FROM node:24-alpine AS base
-RUN corepack enable && pnpm -v
+RUN corepack enable
+WORKDIR /app
+COPY package.json ./
+# 构建期就装好 packageManager 指定的 pnpm，避免容器启动时联网下载
+RUN corepack install --global "$(node -p 'require("./package.json").packageManager')" && pnpm -v
 
 
 FROM base AS deps

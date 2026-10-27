@@ -37,12 +37,12 @@ RUN find node_modules/.pnpm/ -type f -name "*.ts" -delete
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=3100
 ENV HOSTNAME="0.0.0.0"
 # zx 依赖 bash
 RUN apk add bash
 COPY --from=builder /app .
 
-EXPOSE 3000
+EXPOSE 3100
 
 CMD ["pnpm", "run", "start"]

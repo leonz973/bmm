@@ -100,7 +100,7 @@ pnpm install
 pnpm dev
 ```
 
-启动后访问 `http://localhost:3000`。
+启动后访问 `http://localhost:3100`。
 
 <a id="scripts"></a>
 
@@ -136,6 +136,7 @@ pnpm dev
 | `AUTH_SECRET`        | NextAuth 密钥，生产环境建议配置            |
 | `AUTH_GITHUB_ID`     | GitHub OAuth Client ID，可选               |
 | `AUTH_GITHUB_SECRET` | GitHub OAuth Client Secret，可选           |
+| `PORT`               | 服务监听端口，默认 `3100`                  |
 
 <a id="database"></a>
 
@@ -158,6 +159,8 @@ pnpm db:migrate
 
 ## 部署
 
+默认监听 `3100` 端口，可通过 `PORT` 环境变量覆盖，例如 `PORT=4000 pnpm start`。
+
 ### Node 部署
 
 ```bash
@@ -179,7 +182,7 @@ docker run --rm \
   -e DB_DRIVER=sqlite \
   -e DB_CONNECTION_URL=file:/app/volume/sqlite.db \
   -v bmm:/app/volume \
-  -p 3000:3000 \
+  -p 3100:3100 \
   bmm
 ```
 
@@ -237,10 +240,10 @@ AUTH_URL=https://your-domain.com
 
 它应该等于用户访问 BMM 的实际地址，例如：
 
-- `http://localhost:3000`
+- `http://localhost:3100`
 - `https://bmm.vercel.app`
 - `https://example.com`
-- `http://10.1.2.3:3000`
+- `http://10.1.2.3:3100`
 
 </details>
 

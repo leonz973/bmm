@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx scripts/db-init.mjs && next dev",
+    "dev": "tsx scripts/db-init.mjs && tsx scripts/server.mjs dev",
     "build": "tsx scripts/db-init.mjs -P && next build",
-    "start": "tsx scripts/db-init.mjs -P && next start",
+    "start": "tsx scripts/db-init.mjs -P && tsx scripts/server.mjs start",
     "lint": "eslint .",
     "test": "vitest",
     "studio": "drizzle-kit studio",

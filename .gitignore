@@ -41,3 +41,6 @@ src/db/*/migrations
 
 sqlite.db
 local.d.ts
+
+# meow-memory 本地记忆库
+.dsh-meow/

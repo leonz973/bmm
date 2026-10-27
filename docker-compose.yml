@@ -22,7 +22,7 @@ services:
       - DB_DRIVER=postgresql
       - DB_CONNECTION_URL=postgresql://postgres:666888@postgres:5432/bmm
     ports:
-      - 3000:3000
+      - 3100:3100
     depends_on:
       postgres:
         condition: service_healthy

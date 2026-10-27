@@ -100,7 +100,7 @@ pnpm install
 pnpm dev
 ```
 
-Then open `http://localhost:3000`.
+Then open `http://localhost:3100`.
 
 <a id="scripts"></a>
 
@@ -136,6 +136,7 @@ See [`.env`](./.env) for the full example.
 | `AUTH_SECRET`        | NextAuth secret, recommended for production        |
 | `AUTH_GITHUB_ID`     | Optional GitHub OAuth Client ID                    |
 | `AUTH_GITHUB_SECRET` | Optional GitHub OAuth Client Secret                |
+| `PORT`               | Server listen port, defaults to `3100`             |
 
 <a id="database"></a>
 
@@ -158,6 +159,8 @@ pnpm db:migrate
 
 ## Deployment
 
+The server listens on port `3100` by default. Override it with the `PORT` environment variable, e.g. `PORT=4000 pnpm start`.
+
 ### Node Deployment
 
 ```bash
@@ -179,7 +182,7 @@ docker run --rm \
   -e DB_DRIVER=sqlite \
   -e DB_CONNECTION_URL=file:/app/volume/sqlite.db \
   -v bmm:/app/volume \
-  -p 3000:3000 \
+  -p 3100:3100 \
   bmm
 ```
 
@@ -237,10 +240,10 @@ These screenshots can help when checking the configuration:
 
 It should equal the real URL users open BMM with, for example:
 
-- `http://localhost:3000`
+- `http://localhost:3100`
 - `https://bmm.vercel.app`
 - `https://example.com`
-- `http://10.1.2.3:3000`
+- `http://10.1.2.3:3100`
 
 </details>
 

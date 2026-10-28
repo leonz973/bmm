@@ -1,4 +1,5 @@
 import ReButton from '@/components/re-export/ReButton'
+import { usePageUtil } from '@/hooks'
 import { IconNames, PageRoutes } from '@cfg'
 import { Avatar, Divider, Listbox, ListboxItem, ListboxSection, addToast, cn } from '@heroui/react'
 import { signOut, useSession } from 'next-auth/react'
@@ -9,6 +10,7 @@ const MENU_ITEM_ICON_CLS = 'text-base translate-y-0.5'
 export function NavUser() {
   const session = useSession()
   const user = session.data?.user
+  const pageUtil = usePageUtil()
   const isAuthenticated = session.status === 'authenticated'
 
   function handleSignOut() {
@@ -68,8 +70,18 @@ export function NavUser() {
               >
                 <span className="flex w-full items-center justify-between gap-6">
                   <span>内容管理</span>
-                  <span className={cn(IconNames.Tabler.EXTERNAL_LINK, 'text-default-400 text-sm')} />
+                  <span
+                    className={cn(IconNames.Tabler.EXTERNAL_LINK, 'text-default-400 text-sm')}
+                  />
                 </span>
+              </ListboxItem>
+            </ListboxSection>
+            <ListboxSection showDivider hidden={!pageUtil.isUserSpace}>
+              <ListboxItem
+                href={PageRoutes.Public.INDEX}
+                startContent={<span className={cn(IconNames.Tabler.HOME, MENU_ITEM_ICON_CLS)} />}
+              >
+                公共首页
               </ListboxItem>
             </ListboxSection>
             <ListboxSection showDivider hidden={!user.isAdmin} className="max-xs:hidden">
@@ -82,7 +94,9 @@ export function NavUser() {
               >
                 <span className="flex w-full items-center justify-between gap-6">
                   <span>管理员后台</span>
-                  <span className={cn(IconNames.Tabler.EXTERNAL_LINK, 'text-default-400 text-sm')} />
+                  <span
+                    className={cn(IconNames.Tabler.EXTERNAL_LINK, 'text-default-400 text-sm')}
+                  />
                 </span>
               </ListboxItem>
             </ListboxSection>

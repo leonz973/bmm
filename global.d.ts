@@ -60,6 +60,7 @@ declare global {
     createdAt: Date
     updatedAt: Date
     relatedTagIds: TagId[]
+    sourceUserName?: string | null
     hostCheckStatus?: 'reachable' | 'unreachable' | 'unchecked'
     hostCheckedAt?: Date | null
     hostCheckHttpStatus?: number | null

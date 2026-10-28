@@ -1,6 +1,7 @@
 import { db, schema } from '@/db'
 import BookmarkPublicationController from '@/controllers/BookmarkPublication.controller'
 import PublicBookmarkController from '@/controllers/PublicBookmark.controller'
+import { findManyBookmarksSchema } from '@/controllers/schemas'
 import { faker } from '@faker-js/faker'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -94,6 +95,11 @@ describe('BookmarkPublicationController', () => {
 
     const tag = await db.query.publicTags.findFirst({ where: eq(publicTags.name, tagName) })
     expect(tag).toBeTruthy()
+
+    const page = await PublicBookmarkController.findMany(
+      findManyBookmarksSchema.parse({ ids: [publicId] })
+    )
+    expect(page.list[0]?.sourceUserName).toBe(`publish-user-${suffix}`)
   })
 
   test('个人书签修改后同步公共副本', async () => {

@@ -117,6 +117,10 @@ export const publicTagToTagRelations = relations(publicTagToTag, (ctx) => {
 
 export const publicBookmarkRelations = relations(publicBookmarks, (ctx) => ({
   relatedTagIds: ctx.many(publicBookmarkToTag),
+  sourceUserBookmark: ctx.one(userBookmarks, {
+    fields: [publicBookmarks.sourceUserBookmarkId],
+    references: [userBookmarks.id],
+  }),
 }))
 
 export const publicBookmarkToTagRelations = relations(publicBookmarkToTag, (ctx) => ({

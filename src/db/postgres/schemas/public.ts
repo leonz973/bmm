@@ -104,6 +104,10 @@ export const bookmarkHostChecks = pgTable('bookmarkHostChecks', {
 
 export const publicBookmarkRelations = relations(publicBookmarks, (ctx) => ({
   relatedTagIds: ctx.many(publicBookmarkToTag),
+  sourceUserBookmark: ctx.one(userBookmarks, {
+    fields: [publicBookmarks.sourceUserBookmarkId],
+    references: [userBookmarks.id],
+  }),
 }))
 
 /**

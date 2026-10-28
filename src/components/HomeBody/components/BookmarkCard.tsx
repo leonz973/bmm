@@ -28,7 +28,7 @@ export default function BookmarkCard(props: Props) {
 
   return (
     <div
-      className="max-xs:pb-3 max-xs:dark:border-white/8 max-xs:dark:bg-content1/22 xs:hover:-translate-y-0.5 xs:hover:border-slate-200/70 xs:hover:bg-white/26 dark:xs:hover:border-white/12 dark:xs:hover:bg-content1/34 flex cursor-pointer flex-col gap-2 rounded-3xl border border-slate-200/65 bg-white/16 p-4 backdrop-blur-md transition-[background-color,border-color,transform] duration-150 dark:border-white/10 dark:bg-content1/28"
+      className="max-xs:pb-3 max-xs:dark:border-white/8 max-xs:dark:bg-content1/22 xs:hover:-translate-y-0.5 xs:hover:border-slate-200/70 xs:hover:bg-white/26 dark:xs:hover:border-white/12 dark:xs:hover:bg-content1/34 flex min-h-40 cursor-pointer flex-col gap-2 rounded-3xl border border-slate-200/65 bg-white/16 p-4 backdrop-blur-md transition-[background-color,border-color,transform] duration-150 dark:border-white/10 dark:bg-content1/28"
       onClick={() => window.open(props.url, '_blank')}
     >
       <a
@@ -44,6 +44,11 @@ export default function BookmarkCard(props: Props) {
           <h3 className="text-foreground-700 xs:text-lg truncate" aria-label={`访问${props.name}`}>
             {props.name}
           </h3>
+          {props.sourceUserName && (
+            <p className="text-default-400 mt-0.5 truncate text-[11px] leading-4">
+              来源：{props.sourceUserName}
+            </p>
+          )}
         </div>
       </a>
       <div className="min-h-10">

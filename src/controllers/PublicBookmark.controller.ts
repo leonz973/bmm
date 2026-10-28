@@ -20,9 +20,23 @@ interface TagIdsExt {
 }
 export type InsertPublicBookmark = Partial<TagIdsExt> & typeof publicBookmarks.$inferInsert
 type SelectBookmark = BookmarkHostCheckSummary &
-  TagIdsExt &
+  TagIdsExt & { sourceUserName?: string | null } &
   Omit<typeof publicBookmarks.$inferSelect, 'sourceUserBookmarkId'>
 export type { SelectBookmark as SelectPublicBookmark }
+
+type BookmarkWithSource = typeof publicBookmarks.$inferSelect & {
+  relatedTagIds: { tId: TagId }[]
+  sourceUserBookmark?: { user?: { name: string | null } | null } | null
+}
+
+function toSelectBookmark(item: BookmarkWithSource): SelectBookmark {
+  const { sourceUserBookmark, ...rest } = item
+  return {
+    ...rest,
+    sourceUserName: sourceUserBookmark?.user?.name ?? null,
+    relatedTagIds: item.relatedTagIds.map((el) => el.tId),
+  }
+}
 
 /**
  * 完全更新 PublicBookmarkToTag 表，使与 bId 关联关联的 tId 全是 tagIds 中的 id
@@ -183,7 +197,10 @@ const PublicBookmarkController = {
     const [list, [{ total }]] = await Promise.all([
       await db.query.publicBookmarks.findMany({
         where: filters,
-        with: { relatedTagIds: true },
+        with: {
+          relatedTagIds: true,
+          sourceUserBookmark: { with: { user: { columns: { name: true } } } },
+        },
         limit,
         offset: (page - 1) * limit,
         orderBy: (() => {
@@ -200,10 +217,7 @@ const PublicBookmarkController = {
       db.select({ total: count() }).from(publicBookmarks).where(filters),
     ])
 
-    const listWithTags = list.map((item) => ({
-      ...item,
-      relatedTagIds: item.relatedTagIds.map((el) => el.tId),
-    }))
+    const listWithTags = list.map(toSelectBookmark)
     const resultList: SelectBookmark[] = query.includeHostCheckSummary
       ? await withBookmarkHostCheckSummaries(listWithTags)
       : listWithTags
@@ -239,15 +253,15 @@ const PublicBookmarkController = {
   },
   async random() {
     const list = await db.query.publicBookmarks.findMany({
-      with: { relatedTagIds: true },
+      with: {
+        relatedTagIds: true,
+        sourceUserBookmark: { with: { user: { columns: { name: true } } } },
+      },
       orderBy: sql`RANDOM()`,
       limit: DEFAULT_BOOKMARK_PAGESIZE,
     })
     return {
-      list: list.map((item) => ({
-        ...item,
-        relatedTagIds: item.relatedTagIds.map((el) => el.tId),
-      })),
+      list: list.map(toSelectBookmark),
     }
   },
   /** 获取所有书签数量 */
@@ -260,28 +274,28 @@ const PublicBookmarkController = {
       orderBy(fields, op) {
         return op.desc(fields.updatedAt)
       },
-      with: { relatedTagIds: true },
+      with: {
+        relatedTagIds: true,
+        sourceUserBookmark: { with: { user: { columns: { name: true } } } },
+      },
       limit: DEFAULT_BOOKMARK_PAGESIZE,
     })
     return {
-      list: res.map((item) => ({
-        ...item,
-        relatedTagIds: item.relatedTagIds.map((el) => el.tId),
-      })),
+      list: res.map(toSelectBookmark),
     }
   },
   /** 根据关键词搜索书签 */
   async search(keyword: string) {
     const res = await db.query.publicBookmarks.findMany({
       where: createBookmarkFilterByKeyword(publicBookmarks, keyword),
-      with: { relatedTagIds: true },
+      with: {
+        relatedTagIds: true,
+        sourceUserBookmark: { with: { user: { columns: { name: true } } } },
+      },
       limit: 100,
     })
     return {
-      list: res.map((item) => ({
-        ...item,
-        relatedTagIds: item.relatedTagIds.map((el) => el.tId),
-      })),
+      list: res.map(toSelectBookmark),
     }
   },
 }

@@ -5,7 +5,7 @@
   <p>面向个人与团队的书签管理器，支持公开展示、用户空间、后台维护，以及 AI 辅助整理流程。</p>
   <p>
     <a href="https://bmm.lccl.cc/" target="_blank">在线体验</a> ·
-    <a href="https://github.com/Y80/bmm" target="_blank">GitHub</a> ·
+    <a href="https://github.com/leonz973/bmm" target="_blank">GitHub</a> ·
     <a href="#quick-start">快速开始</a>
   </p>
   <p>
@@ -16,6 +16,9 @@
     <img src="https://img.shields.io/badge/Drizzle_ORM-0.44-green" alt="Drizzle ORM">
   </p>
 </div>
+
+> [!NOTE]
+> 本仓库 Fork 自 [Y80/bmm](https://github.com/Y80/bmm)，基于原项目进行二次开发。感谢原作者及所有贡献者的开源工作。
 
 <!-- README-I18N:START -->
 
@@ -94,7 +97,7 @@ BMM 是一个用于管理网站书签的开源应用。它把“收藏网页”�
 ### 本地开发
 
 ```bash
-git clone https://github.com/Y80/bmm.git
+git clone https://github.com/leonz973/bmm.git
 cd bmm
 pnpm install
 pnpm dev
@@ -164,7 +167,7 @@ pnpm db:migrate
 ### Node 部署
 
 ```bash
-git clone https://github.com/Y80/bmm.git
+git clone https://github.com/leonz973/bmm.git
 cd bmm
 pnpm install
 pnpm build

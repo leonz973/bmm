@@ -5,7 +5,7 @@
   <p>Built for personal and team use, with a public showcase, user workspace, admin tools, and AI-assisted bookmark workflows.</p>
   <p>
     <a href="https://bmm.lccl.cc/" target="_blank">Live Demo</a> ·
-    <a href="https://github.com/Y80/bmm" target="_blank">GitHub</a> ·
+    <a href="https://github.com/leonz973/bmm" target="_blank">GitHub</a> ·
     <a href="#quick-start">Quick Start</a>
   </p>
   <p>
@@ -16,6 +16,9 @@
     <img src="https://img.shields.io/badge/Drizzle_ORM-0.44-green" alt="Drizzle ORM">
   </p>
 </div>
+
+> [!NOTE]
+> This repository is forked from [Y80/bmm](https://github.com/Y80/bmm) and further developed based on the original project. Thanks to the original author and all contributors for their open-source work.
 
 <!-- README-I18N:START -->
 
@@ -94,7 +97,7 @@ You can use it as:
 ### Local Development
 
 ```bash
-git clone https://github.com/Y80/bmm.git
+git clone https://github.com/leonz973/bmm.git
 cd bmm
 pnpm install
 pnpm dev
@@ -164,7 +167,7 @@ The server listens on port `3100` by default. Override it with the `PORT` enviro
 ### Node Deployment
 
 ```bash
-git clone https://github.com/Y80/bmm.git
+git clone https://github.com/leonz973/bmm.git
 cd bmm
 pnpm install
 pnpm build

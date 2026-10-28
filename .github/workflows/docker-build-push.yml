@@ -43,9 +43,15 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:1.0
+            ${{ env.IMAGE_NAME }}:1.0.${{ github.run_number }}
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=1.0.${{ github.run_number }}
+            org.opencontainers.image.title=BMM
+            org.opencontainers.image.description=Bookmark Manager
+            org.opencontainers.image.licenses=MIT
           cache-from: type=gha
           cache-to: type=gha,mode=max

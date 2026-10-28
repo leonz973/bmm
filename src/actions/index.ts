@@ -9,6 +9,7 @@ import {
   SiteSettingController,
   UserController,
   UserBookmarkController,
+  UserPreferenceController,
   UserReadLaterController,
   UserTagController,
   aiProvidersConfigSchema,
@@ -26,6 +27,7 @@ import {
   siteProxyConfigSchema,
   testAiProviderSchema,
   updateReadLaterItemSchema,
+  userPreferencesSchema,
 } from '@/controllers'
 import {
   aiAnalyzeRelatedTagsInput,
@@ -42,15 +44,22 @@ export const actFindPublicBookmarks = make(PublicBookmarkController.findMany, { 
 export const actInsertPublicBookmark = make(PublicBookmarkController.insert, { guard: 'admin' })
 export const actQueryPublicBookmark = make(PublicBookmarkController.query, { guard: 'admin' })
 export const actDeletePublicBookmark = make(PublicBookmarkController.delete, { guard: 'admin' })
-export const actDeletePublicBookmarks = make(PublicBookmarkController.removeMany, { guard: 'admin' })
+export const actDeletePublicBookmarks = make(PublicBookmarkController.removeMany, {
+  guard: 'admin',
+})
 export const actUpdatePublicBookmark = make(PublicBookmarkController.update, { guard: 'admin' })
-export const actCheckPublicBookmarkHost = make(PublicBookmarkController.checkHost, { guard: 'admin' })
+export const actCheckPublicBookmarkHost = make(PublicBookmarkController.checkHost, {
+  guard: 'admin',
+})
 export const actBatchCheckPublicBookmarkHosts = make(PublicBookmarkController.batchCheckHosts, {
   guard: 'admin',
 })
-export const actStartPublicBookmarkHostCheckTask = make(PublicBookmarkController.startCheckHostsTask, {
-  guard: 'admin',
-})
+export const actStartPublicBookmarkHostCheckTask = make(
+  PublicBookmarkController.startCheckHostsTask,
+  {
+    guard: 'admin',
+  }
+)
 export const actGetPublicBookmarkHostCheckTask = make(PublicBookmarkController.getCheckHostsTask, {
   guard: 'admin',
 })
@@ -124,6 +133,11 @@ export const actDeleteReadLaterItem = make(UserReadLaterController.delete, {
 })
 export const actUpdateReadLaterItem = make(UserReadLaterController.update, {
   schema: updateReadLaterItemSchema,
+})
+
+/// User preferences
+export const actUpdateUserPreferences = make(UserPreferenceController.update, {
+  schema: userPreferencesSchema,
 })
 
 /// Users

@@ -12,6 +12,7 @@ import { Avatar, Card, CardBody, Form, FormProps, cn } from '@heroui/react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { FormEvent, useState, useTransition } from 'react'
+import BookmarkLayoutSettings from './BookmarkLayoutSettings'
 
 type Props = {
   user: {
@@ -71,7 +72,9 @@ export default function ClientPage(props: Props) {
   return (
     <div className="relative mx-auto flex h-full w-full max-w-5xl items-start px-0 sm:px-6">
       <div className="mx-auto w-full max-w-4xl space-y-5">
-        <AdminPageTitle title="个人资料" pathname={pathname} icon={IconNames.Tabler.USER} />
+        <AdminPageTitle title="偏好设置" pathname={pathname} icon={IconNames.Huge.SETTINGS} />
+
+        <BookmarkLayoutSettings />
 
         <Card
           shadow="none"

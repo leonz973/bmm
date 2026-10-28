@@ -21,6 +21,14 @@ export {
   type SiteAuthConfig,
 } from './SiteSetting.controller'
 export { default as UserController } from './User.controller'
+export {
+  DEFAULT_USER_PREFERENCES,
+  MOBILE_BOOKMARK_LAYOUTS,
+  default as UserPreferenceController,
+  userPreferencesSchema,
+  type MobileBookmarkLayout,
+  type UserPreferences,
+} from './UserPreference.controller'
 export { default as UserBookmarkController } from './UserBookmark.controller'
 export { default as UserReadLaterController } from './UserReadLater.controller'
 export { default as UserTagController } from './UserTag.controller'

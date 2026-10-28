@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import ClientPage from './ClientPage'
 
 export const metadata = {
-  title: '个人资料',
+  title: '偏好设置',
 }
 
 export default async function Page() {

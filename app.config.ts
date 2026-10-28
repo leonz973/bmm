@@ -250,10 +250,10 @@ export const USER_CMS_NAV_LINKS = [
     separatorAfter: true,
   },
   {
-    label: '个人资料',
+    label: '偏好设置',
     href: PageRoutes.User.SETTINGS,
     icon: IconNames.Huge.SETTINGS,
-    description: '更新昵称、头像与个人资料',
+    description: '设置书签显示方式与个人资料',
     accent: 'from-slate-300 via-slate-400 to-slate-500',
   },
   {

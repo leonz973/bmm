@@ -1,4 +1,6 @@
 import { AppBackground } from '@/components/AppBackground'
+import { UserPreferenceProvider } from '@/components/UserPreferenceProvider'
+import { DEFAULT_USER_PREFERENCES, UserPreferenceController } from '@/controllers'
 import '@/globals.css'
 import { auth } from '@/lib/auth'
 import { AntdRegistry } from '@ant-design/nextjs-registry'
@@ -31,6 +33,9 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: PropsWithChildren) {
   const session = await auth()
+  const preferences = session?.user?.id
+    ? await UserPreferenceController.get(session.user.id)
+    : DEFAULT_USER_PREFERENCES
 
   return (
     <html lang="zh-CN" className="bg-background text-foreground min-w-xs" suppressHydrationWarning>
@@ -43,7 +48,9 @@ export default async function RootLayout({ children }: PropsWithChildren) {
         )}
         <AppBackground />
         <GlobalProvider session={session}>
-          <AntdRegistry>{children}</AntdRegistry>
+          <UserPreferenceProvider initialLayout={preferences.mobileBookmarkLayout}>
+            <AntdRegistry>{children}</AntdRegistry>
+          </UserPreferenceProvider>
         </GlobalProvider>
       </body>
     </html>

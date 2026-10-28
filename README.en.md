@@ -132,7 +132,7 @@ See [`.env`](./.env) for the full example.
 | `DB_DRIVER`          | Database driver, `sqlite` or `postgresql`          |
 | `DB_CONNECTION_URL`  | Database connection string                         |
 | `DB_AUTH_TOKEN`      | Optional token for Turso or libsql                 |
-| `AUTH_URL`           | Current site URL used by auth and deployment flows |
+| `AUTH_URL`           | Site URL; optional, falls back to the request host |
 | `AUTH_SECRET`        | NextAuth secret, recommended for production        |
 | `AUTH_GITHUB_ID`     | Optional GitHub OAuth Client ID                    |
 | `AUTH_GITHUB_SECRET` | Optional GitHub OAuth Client Secret                |

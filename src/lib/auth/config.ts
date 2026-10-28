@@ -11,6 +11,8 @@ import { createGithubProvider, GithubProviderConfig } from './github-provider'
 export function createAuthConfig(github: GithubProviderConfig | null) {
   return {
     // debug: true,
+    // 未配置 AUTH_URL 时按请求的 Host 判断站点地址，便于容器/代理部署
+    trustHost: true,
     providers: [...(github ? [createGithubProvider(github)] : []), credentialsProvider],
     // session 1 天内有效，超过 1 天会自动更新；超过 30 天内没有任何操作，就会过期，useSession() auth() 返回 null
     session: { strategy: 'jwt', maxAge: 30 * 24 * 3600, updateAge: 24 * 3600 },

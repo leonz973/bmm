@@ -113,7 +113,7 @@ export function checkEnvs() {
     process.env.AUTH_URL = process.env.VERCEL_URL
   }
   if (process.env.NODE_ENV === 'production' && !process.env.AUTH_URL) {
-    unsetEnv.push('AUTH_URL')
+    zx.echo(zx.chalk.yellow('未设置 AUTH_URL，将按请求的 Host 自动判断站点地址\n'))
   }
   if (unsetEnv.length) {
     zx.echo(zx.chalk.red('环境变量缺失: ' + unsetEnv.join(', ') + '\n'))

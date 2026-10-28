@@ -24,6 +24,8 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# 删掉 .env 里的 AUTH_URL，避免把构建机的 localhost 地址固化进镜像；生产环境应由容器环境变量提供，未提供时按请求 Host 自动判断
+RUN sed -i '/^AUTH_URL=/d' .env || true
 # docker 构建镜像时不需要预先配置数据库，所以不需要执行 db-init 脚本，这里直接 next build 就行
 # 忽略构建错误，因为在 Github Action 中构建时，全是静态的类型检查会导致一些错误
 RUN export IGNORE_BUILD_ERRORS=true && pnpm next build && pnpm prune --prod

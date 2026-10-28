@@ -14,7 +14,8 @@ export default async function setup(phase) {
     checkEnvs()
   }
 
-  const domainHost = new URL(process.env.AUTH_URL || 'http://localhost').host
+  // 仅当显式配置了 AUTH_URL 时才限制 Server Actions 的来源，否则交给 Next 按请求 Host 判断
+  const domainHost = process.env.AUTH_URL ? new URL(process.env.AUTH_URL).host : undefined
 
   /** @type {import('next').NextConfig} */
   const nextConfig = {
@@ -36,7 +37,7 @@ export default async function setup(phase) {
       }) : undefined
     },
     experimental: {
-      serverActions: { allowedOrigins: [domainHost] }
+      ...(domainHost ? { serverActions: { allowedOrigins: [domainHost] } } : {}),
     },
     typescript: {
       ignoreBuildErrors: Boolean(process.env.IGNORE_BUILD_ERRORS),

@@ -132,7 +132,7 @@ pnpm dev
 | `DB_DRIVER`          | 数据库驱动，支持 `sqlite` 或 `postgresql`  |
 | `DB_CONNECTION_URL`  | 数据库连接串                               |
 | `DB_AUTH_TOKEN`      | Turso 或 libsql 场景的令牌，可选           |
-| `AUTH_URL`           | 当前站点访问地址，OAuth 回调与部署时会用到 |
+| `AUTH_URL`           | 站点访问地址，可留空，留空时按请求 Host 自动判断 |
 | `AUTH_SECRET`        | NextAuth 密钥，生产环境建议配置            |
 | `AUTH_GITHUB_ID`     | GitHub OAuth Client ID，可选               |
 | `AUTH_GITHUB_SECRET` | GitHub OAuth Client Secret，可选           |

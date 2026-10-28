@@ -81,7 +81,16 @@ export async function loadEnv(options = {}) {
   const NextEnv = await import('@next/env')
   const loadEnvConfig = NextEnv.loadEnvConfig || NextEnv.default.loadEnvConfig
   loadEnvConfig(process.cwd(), isProduction)
+  loadExtraEnvFile()
   tryLoadParentGitRepoEnv(options)
+}
+
+// 容器部署时把配置放在挂载卷里，重建容器也不会丢；存在才加载，且优先级最高
+export function loadExtraEnvFile() {
+  const extraEnvFile = process.env.EXTRA_ENV_FILE || path.resolve('/app/volume/.env')
+  if (!fs.existsSync(extraEnvFile)) return
+  dotenv.config({ path: extraEnvFile, override: true })
+  zx.echo(zx.chalk.cyan(`💡 已加载额外环境变量: ${extraEnvFile}`))
 }
 
 

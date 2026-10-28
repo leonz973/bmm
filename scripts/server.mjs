@@ -3,6 +3,7 @@
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 import * as NextEnv from '@next/env'
+import { loadExtraEnvFile } from './utils.mjs'
 
 const DEFAULT_PORT = 3100
 
@@ -12,6 +13,7 @@ const isDev = mode === 'dev'
 process.env.NODE_ENV ||= isDev ? 'development' : 'production'
 const loadEnvConfig = NextEnv.loadEnvConfig || NextEnv.default.loadEnvConfig
 loadEnvConfig(process.cwd(), isDev)
+loadExtraEnvFile()
 
 const port = process.env.PORT || String(DEFAULT_PORT)
 const nextBin = path.resolve('node_modules/next/dist/bin/next')

@@ -142,4 +142,50 @@ describe('BookmarkPublicationController', () => {
     })
     expect(publicRow).toBeTruthy()
   })
+
+  test('管理员拒绝取消公开申请后书签保持公开', async () => {
+    currentUser.isAdmin = false
+    const request = await BookmarkPublicationController.requestUnpublish({ id: bookmarkId })
+    expect(request.status).toBe('unpublishing')
+
+    currentUser.isAdmin = true
+    const result = await BookmarkPublicationController.review({
+      id: bookmarkId,
+      approve: false,
+      rejectReason: '仍需要公开展示',
+    })
+    expect(result.status).toBe('public')
+
+    const publicRow = await db.query.publicBookmarks.findFirst({
+      where: eq(publicBookmarks.sourceUserBookmarkId, bookmarkId),
+    })
+    expect(publicRow).toBeTruthy()
+  })
+
+  test('管理员通过取消公开申请后移除公共副本', async () => {
+    currentUser.isAdmin = false
+    const request = await BookmarkPublicationController.requestUnpublish({ id: bookmarkId })
+    expect(request.status).toBe('unpublishing')
+
+    currentUser.isAdmin = true
+    const result = await BookmarkPublicationController.review({ id: bookmarkId, approve: true })
+    expect(result.status).toBe('private')
+
+    const publicRow = await db.query.publicBookmarks.findFirst({
+      where: eq(publicBookmarks.sourceUserBookmarkId, bookmarkId),
+    })
+    expect(publicRow).toBeFalsy()
+  })
+
+  test('管理员可以直接取消公开', async () => {
+    currentUser.isAdmin = true
+    await BookmarkPublicationController.request({ id: bookmarkId })
+    const result = await BookmarkPublicationController.requestUnpublish({ id: bookmarkId })
+    expect(result.status).toBe('private')
+
+    const publicRow = await db.query.publicBookmarks.findFirst({
+      where: eq(publicBookmarks.sourceUserBookmarkId, bookmarkId),
+    })
+    expect(publicRow).toBeFalsy()
+  })
 })

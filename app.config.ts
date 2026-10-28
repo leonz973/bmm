@@ -175,7 +175,7 @@ export const ADMIN_NAV_LINKS = [
   {
     label: '公开审核',
     href: PageRoutes.Admin.PUBLIC_REQUESTS,
-    icon: IconNames.Tabler.UPLOAD,
+    icon: IconNames.Tabler.BOOKMARK,
     description: '审核用户提交的公开书签申请',
     accent: 'from-emerald-300 via-teal-400 to-cyan-500',
   },

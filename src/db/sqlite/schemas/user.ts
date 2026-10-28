@@ -60,7 +60,7 @@ export const userBookmarks = sqliteTable(
     description: text('description'),
     isPinned: integer('isPinned', { mode: 'boolean' }),
     publishStatus: text('publishStatus', {
-      enum: ['private', 'pending', 'public', 'rejected'],
+      enum: ['private', 'pending', 'public', 'unpublishing', 'rejected'],
     })
       .notNull()
       .default('private'),

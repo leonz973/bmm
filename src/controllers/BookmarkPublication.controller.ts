@@ -6,7 +6,13 @@ import PublicTagController from './PublicTag.controller'
 
 const { publicBookmarkToTag, publicBookmarks, userBookmarkToTag, userBookmarks, userTags } = schema
 
-export const publishStatusSchema = z.enum(['private', 'pending', 'public', 'rejected'])
+export const publishStatusSchema = z.enum([
+  'private',
+  'pending',
+  'public',
+  'unpublishing',
+  'rejected',
+])
 export type PublishStatus = z.output<typeof publishStatusSchema>
 
 export const bookmarkPublishInputSchema = z.object({
@@ -128,6 +134,25 @@ async function publishBookmark(bookmarkId: number) {
   return { status: 'public' as const }
 }
 
+async function unpublishBookmark(bookmarkId: number) {
+  const publicId = await getPublicCopyId(bookmarkId)
+  if (publicId) {
+    await db.delete(publicBookmarks).where(eq(publicBookmarks.id, publicId))
+  }
+
+  await db
+    .update(userBookmarks)
+    .set({
+      publishStatus: 'private',
+      publishedAt: null,
+      publishRequestedAt: null,
+      publishRejectReason: null,
+    })
+    .where(eq(userBookmarks.id, bookmarkId))
+
+  return { status: 'private' as const }
+}
+
 // 管理员直接公开；普通用户提交申请
 async function request(input: z.output<typeof bookmarkPublishInputSchema>) {
   const actor = await getActor()
@@ -139,6 +164,7 @@ async function request(input: z.output<typeof bookmarkPublishInputSchema>) {
 
   if (bookmark.publishStatus === 'public') throw new Error('该书签已经公开')
   if (bookmark.publishStatus === 'pending') throw new Error('该书签已提交公开申请，请等待管理员审核')
+  if (bookmark.publishStatus === 'unpublishing') throw new Error('该书签正在取消公开审核中')
   if (actor.isAdmin) return await publishBookmark(bookmark.id)
 
   await db
@@ -153,25 +179,42 @@ async function request(input: z.output<typeof bookmarkPublishInputSchema>) {
   return { status: 'pending' as const }
 }
 
-async function cancel(input: z.output<typeof bookmarkPublishInputSchema>) {
+// 管理员直接取消公开；普通用户提交取消公开申请
+async function requestUnpublish(input: z.output<typeof bookmarkPublishInputSchema>) {
   const actor = await getActor()
-  const rows = await db
+  const where = actor.isAdmin
+    ? eq(userBookmarks.id, input.id)
+    : and(eq(userBookmarks.id, input.id), eq(userBookmarks.userId, actor.userId))
+  const bookmark = await db.query.userBookmarks.findFirst({ where })
+  if (!bookmark) throw new Error('书签不存在')
+
+  if (bookmark.publishStatus === 'private' || bookmark.publishStatus === 'rejected') {
+    throw new Error('该书签尚未公开')
+  }
+  if (bookmark.publishStatus === 'unpublishing') {
+    throw new Error('该书签已提交取消公开申请，请等待管理员审核')
+  }
+  if (actor.isAdmin) return await unpublishBookmark(bookmark.id)
+
+  // 还没公开、只是在审核中的申请，直接撤回即可
+  if (bookmark.publishStatus === 'pending') {
+    await db
+      .update(userBookmarks)
+      .set({ publishStatus: 'private', publishRequestedAt: null, publishRejectReason: null })
+      .where(eq(userBookmarks.id, bookmark.id))
+    return { status: 'private' as const }
+  }
+
+  await db
     .update(userBookmarks)
     .set({
-      publishStatus: 'private',
-      publishRequestedAt: null,
+      publishStatus: 'unpublishing',
+      publishRequestedAt: new Date(),
       publishRejectReason: null,
     })
-    .where(
-      and(
-        eq(userBookmarks.id, input.id),
-        eq(userBookmarks.userId, actor.userId),
-        eq(userBookmarks.publishStatus, 'pending')
-      )
-    )
-    .returning({ id: userBookmarks.id })
-  if (!rows.length) throw new Error('没有可撤回的公开申请')
-  return { status: 'private' as const }
+    .where(eq(userBookmarks.id, bookmark.id))
+
+  return { status: 'unpublishing' as const }
 }
 
 async function findMany(input?: z.input<typeof findBookmarkPublishRequestsSchema>) {
@@ -225,9 +268,27 @@ async function review(input: z.output<typeof reviewBookmarkPublishSchema>) {
     where: eq(userBookmarks.id, input.id),
   })
   if (!bookmark) throw new Error('书签不存在')
-  if (bookmark.publishStatus !== 'pending') throw new Error('该申请已处理')
+  const isUnpublishRequest = bookmark.publishStatus === 'unpublishing'
+  if (bookmark.publishStatus !== 'pending' && !isUnpublishRequest) {
+    throw new Error('该申请已处理')
+  }
 
-  if (input.approve) return await publishBookmark(bookmark.id)
+  if (input.approve) {
+    return isUnpublishRequest
+      ? await unpublishBookmark(bookmark.id)
+      : await publishBookmark(bookmark.id)
+  }
+
+  if (isUnpublishRequest) {
+    await db
+      .update(userBookmarks)
+      .set({
+        publishStatus: 'public',
+        publishRejectReason: input.rejectReason?.trim() || null,
+      })
+      .where(eq(userBookmarks.id, bookmark.id))
+    return { status: 'public' as const }
+  }
 
   await db
     .update(userBookmarks)
@@ -254,7 +315,7 @@ async function assertCanSync(
     columns: { id: true, name: true, url: true, publishStatus: true },
   })
   if (!bookmark) throw new Error('书签不存在')
-  if (bookmark.publishStatus !== 'public') return
+  if (bookmark.publishStatus !== 'public' && bookmark.publishStatus !== 'unpublishing') return
 
   const publicId = await getPublicCopyId(bookmarkId)
   if (!publicId) return
@@ -276,7 +337,7 @@ async function syncAfterUpdate(bookmarkId: number) {
   const bookmark = await db.query.userBookmarks.findFirst({
     where: eq(userBookmarks.id, bookmarkId),
   })
-  if (!bookmark || bookmark.publishStatus !== 'public') return
+  if (!bookmark || (bookmark.publishStatus !== 'public' && bookmark.publishStatus !== 'unpublishing')) return
 
   const publicId = await getPublicCopyId(bookmarkId)
   if (!publicId) {
@@ -322,10 +383,11 @@ async function removePublicCopies(userBookmarkIds: number[], userId: string) {
 
 const BookmarkPublicationController = {
   request,
-  cancel,
+  requestUnpublish,
   findMany,
   review,
   publish: publishBookmark,
+  unpublish: unpublishBookmark,
   assertCanSync,
   syncAfterUpdate,
   removePublicCopy,

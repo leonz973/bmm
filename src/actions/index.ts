@@ -97,7 +97,7 @@ export const actGetUserBookmarkHostCheckTask = make(UserBookmarkController.getCh
 export const actRequestBookmarkPublish = make(BookmarkPublicationController.request, {
   schema: bookmarkPublishInputSchema,
 })
-export const actCancelBookmarkPublish = make(BookmarkPublicationController.cancel, {
+export const actRequestBookmarkUnpublish = make(BookmarkPublicationController.requestUnpublish, {
   schema: bookmarkPublishInputSchema,
 })
 export const actFindBookmarkPublishRequests = make(BookmarkPublicationController.findMany, {

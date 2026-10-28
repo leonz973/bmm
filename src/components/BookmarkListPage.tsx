@@ -3,7 +3,6 @@
 import {
   actBatchCheckPublicBookmarkHosts,
   actBatchCheckUserBookmarkHosts,
-  actCancelBookmarkPublish,
   actCheckPublicBookmarkHost,
   actCheckUserBookmarkHost,
   actDeletePublicBookmark,
@@ -15,6 +14,7 @@ import {
   actGetPublicBookmarkHostCheckTask,
   actGetUserBookmarkHostCheckTask,
   actRequestBookmarkPublish,
+  actRequestBookmarkUnpublish,
   actStartPublicBookmarkHostCheckTask,
   actStartUserBookmarkHostCheckTask,
   actUpdatePublicBookmark,
@@ -356,17 +356,16 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
     setState({ checkingId: null })
   }
 
-  async function onRequestPublish(item: BookmarkRow) {
-    const isPending = item.publishStatus === 'pending'
+  async function onTogglePublish(item: BookmarkRow, checked: boolean) {
     setState({ publishingId: item.id })
-    if (isPending) {
-      await runAction(actCancelBookmarkPublish({ id: item.id }), {
-        okMsg: '已撤回公开申请',
+    if (checked) {
+      await runAction(actRequestBookmarkPublish({ id: item.id }), {
+        okMsg: isAdmin ? '已公开到公共首页' : '已提交公开申请，等待管理员审核',
         onOk: refresh,
       })
     } else {
-      await runAction(actRequestBookmarkPublish({ id: item.id }), {
-        okMsg: isAdmin ? '已直接公开到公共首页' : '已提交公开申请，等待管理员审核',
+      await runAction(actRequestBookmarkUnpublish({ id: item.id }), {
+        okMsg: isAdmin ? '已取消公开' : '已提交取消公开申请，等待管理员审核',
         onOk: refresh,
       })
     }
@@ -375,29 +374,37 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
 
   function renderPublishStatus(item: BookmarkRow) {
     const status: PublishStatus = item.publishStatus || 'private'
-    const config = {
-      private: { label: '申请公开', color: 'primary' as const, tooltip: '提交到公共首页' },
-      pending: { label: '审核中', color: 'warning' as const, tooltip: '点击撤回公开申请' },
-      public: { label: '已公开', color: 'success' as const, tooltip: '已在公共首页展示' },
-      rejected: {
-        label: '重新申请',
-        color: 'danger' as const,
-        tooltip: item.publishRejectReason || '申请未通过，可重新提交',
-      },
+    const isSelected = status === 'public' || status === 'unpublishing'
+    const isPending = status === 'pending' || status === 'unpublishing'
+    const label = {
+      private: '未公开',
+      pending: '待审核',
+      public: '已公开',
+      unpublishing: '取消审核中',
+      rejected: '已拒绝',
     }[status]
 
     return (
-      <ReButton
-        size="sm"
-        variant="flat"
-        color={config.color}
-        tooltip={config.tooltip}
-        isLoading={state.publishingId === item.id}
-        isDisabled={status === 'public'}
-        onPress={() => onRequestPublish(item)}
-      >
-        {config.label}
-      </ReButton>
+      <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <Switch
+            size="sm"
+            aria-label={`${item.name} 公开状态`}
+            isSelected={isSelected}
+            isDisabled={isPending || state.publishingId === item.id}
+            onValueChange={(checked) => onTogglePublish(item, checked)}
+          />
+          <span className="text-default-500 whitespace-nowrap text-xs">{label}</span>
+        </div>
+        {status === 'rejected' && item.publishRejectReason && (
+          <span
+            className="text-danger line-clamp-1 text-[11px]"
+            title={item.publishRejectReason}
+          >
+            {item.publishRejectReason}
+          </span>
+        )}
+      </div>
     )
   }
 
@@ -700,7 +707,7 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
             <TableColumn className="w-[16%] min-w-24">关联标签</TableColumn>
             <TableColumn className="w-[18%] min-w-24">检测状态</TableColumn>
             <TableColumn className="w-16">置顶</TableColumn>
-            <TableColumn className={isUserSpace ? 'w-24' : 'hidden'}>公开</TableColumn>
+            <TableColumn className={isUserSpace ? 'w-32' : 'hidden'}>公开</TableColumn>
             <TableColumn className="w-28">操作</TableColumn>
           </TableHeader>
           <TableBody<BookmarkRow>
@@ -756,7 +763,7 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
                     />
                   </TableCell>
                   <TableCell className={isUserSpace ? '' : 'hidden'}>
-                    <div className="flex w-24 items-center">{renderPublishStatus(item)}</div>
+                    <div className="flex w-32 items-center">{renderPublishStatus(item)}</div>
                   </TableCell>
                   <TableCell>
                     <div className="flex w-28 items-center">

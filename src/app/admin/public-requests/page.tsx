@@ -24,7 +24,7 @@ import {
 import { useRequest } from 'ahooks'
 import { useState } from 'react'
 
-type PublishStatus = 'pending' | 'public' | 'rejected'
+type PublishStatus = 'pending' | 'unpublishing' | 'public' | 'rejected'
 
 interface PublishRequestItem {
   id: number
@@ -42,8 +42,9 @@ interface PublishRequestItem {
 }
 
 const STATUS_OPTIONS: { key: PublishStatus; label: string; color: 'warning' | 'success' | 'danger' }[] = [
-  { key: 'pending', label: '待审核', color: 'warning' },
-  { key: 'public', label: '已通过', color: 'success' },
+  { key: 'pending', label: '待公开', color: 'warning' },
+  { key: 'unpublishing', label: '待取消', color: 'warning' },
+  { key: 'public', label: '已公开', color: 'success' },
   { key: 'rejected', label: '已拒绝', color: 'danger' },
 ]
 
@@ -74,16 +75,27 @@ export default function Page() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   async function review(item: PublishRequestItem, approve: boolean) {
+    const isUnpublish = item.publishStatus === 'unpublishing'
     setReviewingId(item.id)
     try {
       await runAction(
         actReviewBookmarkPublish({
           id: item.id,
           approve,
-          rejectReason: approve ? undefined : '管理员拒绝了公开申请',
+          rejectReason: approve
+            ? undefined
+            : isUnpublish
+              ? '管理员拒绝了取消公开申请'
+              : '管理员拒绝了公开申请',
         }),
         {
-          okMsg: approve ? '已通过公开申请' : '已拒绝公开申请',
+          okMsg: isUnpublish
+            ? approve
+              ? '已通过取消公开申请'
+              : '已拒绝取消公开申请'
+            : approve
+              ? '已通过公开申请'
+              : '已拒绝公开申请',
           onOk: refresh,
         }
       )
@@ -93,12 +105,17 @@ export default function Page() {
   }
 
   function confirmReview(item: PublishRequestItem, approve: boolean) {
+    const isUnpublish = item.publishStatus === 'unpublishing'
+    const action = isUnpublish ? '取消公开' : '公开'
     MyModal.open({
-      title: approve ? '通过公开申请' : '拒绝公开申请',
+      title: `${approve ? '通过' : '拒绝'}${action}申请`,
       children: (
         <p>
-          确定{approve ? '通过' : '拒绝'}「{item.name}」的公开申请？
-          {approve && ' 通过后将立即在公共首页展示。'}
+          确定{approve ? '通过' : '拒绝'}「{item.name}」的{action}申请？
+          {approve &&
+            (isUnpublish
+              ? ' 通过后将立即从公共首页移除。'
+              : ' 通过后将立即在公共首页展示。')}
         </p>
       ),
       okButtonProps: approve ? { color: 'primary' } : { color: 'danger' },
@@ -120,7 +137,7 @@ export default function Page() {
       />
       <AdminSurfaceCard
         title="个人书签公开申请"
-        description="普通用户提交申请后在此审核；管理员在个人书签列表操作时可直接公开。"
+        description="普通用户提交公开或取消公开申请后在此审核；管理员在自己的书签列表切换开关时立即生效。"
         extra={
           <div className="flex items-center gap-2">
             {STATUS_OPTIONS.map((option) => (
@@ -213,7 +230,7 @@ export default function Page() {
                   </Chip>
                 </TableCell>
                 <TableCell>
-                  {item.publishStatus === 'pending' ? (
+                  {item.publishStatus === 'pending' || item.publishStatus === 'unpublishing' ? (
                     <div className="flex items-center gap-1">
                       <ReButton
                         size="sm"

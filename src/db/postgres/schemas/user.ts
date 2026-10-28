@@ -72,7 +72,7 @@ export const userBookmarks = pgTable(
     description: varchar('description', { length: FieldConstraints.MaxLen.BOOKMARK_DESC }),
     isPinned: boolean('isPinned'),
     publishStatus: varchar('publishStatus', { length: 20 })
-      .$type<'private' | 'pending' | 'public' | 'rejected'>()
+      .$type<'private' | 'pending' | 'public' | 'unpublishing' | 'rejected'>()
       .notNull()
       .default('private'),
     publishRequestedAt: timestamp('publishRequestedAt', { mode: 'date' }),

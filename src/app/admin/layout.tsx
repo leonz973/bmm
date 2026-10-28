@@ -1,5 +1,6 @@
+import AppLockScreen from '@/components/AppLockScreen'
 import CmsLayout from '@/components/CmsLayout'
-import { PublicBookmarkController, PublicTagController } from '@/controllers'
+import { AppLockController, PublicBookmarkController, PublicTagController } from '@/controllers'
 import UserController from '@/controllers/User.controller'
 import { auth } from '@/lib/auth'
 import { PageRoutes, WEBSITE_NAME } from '@cfg'
@@ -17,13 +18,30 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout(props: PropsWithChildren) {
   const session = await auth()
+  const user = session?.user
+  const userId = user?.id
 
-  if (!session) {
+  if (!user || !userId) {
     redirect(PageRoutes.LOGIN)
   }
 
-  if (!session.user.isAdmin) {
+  if (!user.isAdmin) {
     redirect(PageRoutes.FORBIDDEN)
+  }
+
+  const gate = await AppLockController.getGateState(userId)
+
+  if (gate.enabled && !gate.unlocked) {
+    return (
+      <AppLockScreen
+        user={{
+          name: user.name || '',
+          email: user.email || '',
+          image: user.image,
+        }}
+        method={gate.method!}
+      />
+    )
   }
 
   const [tags, total, totalUsers] = await Promise.all([

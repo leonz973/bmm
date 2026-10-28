@@ -1,5 +1,7 @@
+import { actLockApp } from '@/actions'
 import ReButton from '@/components/re-export/ReButton'
 import { usePageUtil } from '@/hooks'
+import { runAction } from '@/utils/client'
 import { IconNames, PageRoutes } from '@cfg'
 import { Avatar, Divider, Listbox, ListboxItem, ListboxSection, addToast, cn } from '@heroui/react'
 import { signOut, useSession } from 'next-auth/react'
@@ -13,7 +15,9 @@ export function NavUser() {
   const pageUtil = usePageUtil()
   const isAuthenticated = session.status === 'authenticated'
 
-  function handleSignOut() {
+  async function handleSignOut() {
+    // 退出登录时同时清掉应用锁解锁凭据，避免下次登录直接跳过应用锁
+    await runAction(actLockApp(), { errToast: { hidden: true } })
     signOut({ redirectTo: PageRoutes.INDEX })
     addToast({ title: '已退出登录' })
   }

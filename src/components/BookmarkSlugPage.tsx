@@ -9,6 +9,7 @@ import {
   actUpdateUserBookmark,
 } from '@/actions'
 import BookmarkIconDropdown from '@/components/BookmarkIconDropdown'
+import BookmarkShareImport from '@/components/BookmarkShareImport'
 import Favicon from '@/components/Favicon'
 import ReButton from '@/components/re-export/ReButton'
 import ReInput from '@/components/re-export/ReInput'
@@ -190,6 +191,9 @@ export default function BookmarkSlugPage(props: BookmarkSlugPageProps) {
 
   return (
     <SlugPageLayout onSave={onSave} title={slug.isNew ? '新建书签' : '编辑书签'}>
+      {slug.isNew && !pageUtil.isAdminSpace && (
+        <BookmarkShareImport tags={props.tags} onResolved={(data) => setBookmark({ ...data })} />
+      )}
       <ReInput
         label="网址"
         type="url"

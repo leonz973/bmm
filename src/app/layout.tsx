@@ -1,6 +1,11 @@
 import { AppBackground } from '@/components/AppBackground'
+import { AppLockIdleGuard } from '@/components/AppLockIdleGuard'
 import { UserPreferenceProvider } from '@/components/UserPreferenceProvider'
-import { DEFAULT_USER_PREFERENCES, UserPreferenceController } from '@/controllers'
+import {
+  AppLockController,
+  DEFAULT_USER_PREFERENCES,
+  UserPreferenceController,
+} from '@/controllers'
 import '@/globals.css'
 import { auth } from '@/lib/auth'
 import { AntdRegistry } from '@ant-design/nextjs-registry'
@@ -33,9 +38,12 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: PropsWithChildren) {
   const session = await auth()
-  const preferences = session?.user?.id
-    ? await UserPreferenceController.get(session.user.id)
-    : DEFAULT_USER_PREFERENCES
+  const [preferences, appLock] = session?.user?.id
+    ? await Promise.all([
+        UserPreferenceController.get(session.user.id),
+        AppLockController.getSettings(session.user.id),
+      ])
+    : [DEFAULT_USER_PREFERENCES, { enabled: false, method: null }]
 
   return (
     <html lang="zh-CN" className="bg-background text-foreground min-w-xs" suppressHydrationWarning>
@@ -49,6 +57,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
         <AppBackground />
         <GlobalProvider session={session}>
           <UserPreferenceProvider initialLayout={preferences.mobileBookmarkLayout}>
+            {appLock.enabled && session?.user.id && <AppLockIdleGuard userId={session.user.id} />}
             <AntdRegistry>{children}</AntdRegistry>
           </UserPreferenceProvider>
         </GlobalProvider>

@@ -20,6 +20,7 @@ import {
   actUpdatePublicBookmark,
   actUpdateUserBookmark,
 } from '@/actions'
+import BookmarkShareButton from '@/components/BookmarkShareButton'
 import ClientIcon from '@/components/ClientIcon'
 import EmptyListPlaceholder from '@/components/EmptyListPlaceholder'
 import Favicon from '@/components/Favicon'
@@ -164,8 +165,10 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
         ...(state.selectedTag && { tagIds: state.selectedTag }),
       } as z.input<typeof findManyBookmarksSchema>
       dataRef.current.loadingMutable && setState({ loading: true })
-      const action = isUserSpace ? actFindUserBookmarks : actFindPublicBookmarks
-      const res = await runAction(action(findManyBookmarksSchema.parse(input)))
+      const parsedInput = findManyBookmarksSchema.parse(input)
+      const res = isUserSpace
+        ? await runAction(actFindUserBookmarks(parsedInput))
+        : await runAction(actFindPublicBookmarks(parsedInput))
       setState({ loading: false })
       dataRef.current.loadingMutable = true
       if (!res.ok) return []
@@ -708,7 +711,7 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
             <TableColumn className="w-[18%] min-w-24">检测状态</TableColumn>
             <TableColumn className="w-16">置顶</TableColumn>
             <TableColumn className={isUserSpace ? 'w-32' : 'hidden'}>公开</TableColumn>
-            <TableColumn className="w-28">操作</TableColumn>
+            <TableColumn className={isUserSpace ? 'w-36' : 'w-28'}>操作</TableColumn>
           </TableHeader>
           <TableBody<BookmarkRow>
             items={state.loading ? [] : bookmarks}
@@ -766,7 +769,7 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
                     <div className="flex w-32 items-center">{renderPublishStatus(item)}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex w-28 items-center">
+                    <div className={cn('flex items-center', isUserSpace ? 'w-36' : 'w-28')}>
                       <ReButton
                         isIconOnly
                         color="primary"
@@ -795,6 +798,7 @@ export default function BookmarkListPage(props: BookmarkListPageProps) {
                       >
                         <span className={IconNames.Tabler.TRASH} />
                       </ReButton>
+                      {isUserSpace && <BookmarkShareButton bookmark={item} />}
                       <ReButton
                         isIconOnly
                         color="warning"

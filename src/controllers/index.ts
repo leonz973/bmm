@@ -7,6 +7,20 @@ export * from './schemas'
 export * from './UserReadLater.controller'
 export type { SelectUserBookmark } from './UserBookmark.controller'
 
+export {
+  APP_LOCK_METHODS,
+  appLockConfigSchema,
+  appLockResetSchema,
+  appLockVerifySchema,
+  default as AppLockController,
+  type AppLockGateState,
+  type AppLockMethod,
+  type AppLockSettings,
+} from './AppLock.controller'
+export {
+  bookmarkShareCodeSchema,
+  default as BookmarkShareController,
+} from './BookmarkShare.controller'
 export { default as AiProviderController } from './AiProvider.controller'
 export { default as BookmarkHostCheckController } from './BookmarkHostCheck.controller'
 export { default as BookmarkPublicationController } from './BookmarkPublication.controller'

@@ -4,6 +4,7 @@ import { actUpdateUserProfile } from '@/actions'
 import AdminPageTitle from '@/components/AdminPageTitle'
 import ReButton from '@/components/re-export/ReButton'
 import ReInput from '@/components/re-export/ReInput'
+import type { AppLockSettings } from '@/controllers'
 import { zodSchemas } from '@/lib/zod'
 import { robustUrl } from '@/utils'
 import { runAction } from '@/utils/client'
@@ -12,6 +13,7 @@ import { Avatar, Card, CardBody, Form, FormProps, cn } from '@heroui/react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { FormEvent, useState, useTransition } from 'react'
+import AppLockSettingsCard from './AppLockSettings'
 import BookmarkLayoutSettings from './BookmarkLayoutSettings'
 
 type Props = {
@@ -20,6 +22,7 @@ type Props = {
     image: string
     email: string
   }
+  appLock: AppLockSettings
 }
 
 export default function ClientPage(props: Props) {
@@ -75,6 +78,8 @@ export default function ClientPage(props: Props) {
         <AdminPageTitle title="偏好设置" pathname={pathname} icon={IconNames.Huge.SETTINGS} />
 
         <BookmarkLayoutSettings />
+
+        <AppLockSettingsCard initial={props.appLock} />
 
         <Card
           shadow="none"

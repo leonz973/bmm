@@ -1,4 +1,5 @@
-import { UserBookmarkController, UserTagController } from '@/controllers'
+import AppLockScreen from '@/components/AppLockScreen'
+import { AppLockController, UserBookmarkController, UserTagController } from '@/controllers'
 import { auth } from '@/lib/auth'
 import { PageRoutes } from '@cfg'
 import { redirect } from 'next/navigation'
@@ -19,8 +20,25 @@ export const generateMetadata = async () => {
 
 export default async function UserLayout(props: PropsWithChildren) {
   const session = await auth()
-  if (!session?.user) {
+  const user = session?.user
+  const userId = user?.id
+  if (!user || !userId) {
     redirect(PageRoutes.LOGIN)
+  }
+
+  const gate = await AppLockController.getGateState(userId)
+
+  if (gate.enabled && !gate.unlocked) {
+    return (
+      <AppLockScreen
+        user={{
+          name: user.name || '',
+          email: user.email || '',
+          image: user.image,
+        }}
+        method={gate.method!}
+      />
+    )
   }
 
   const [tags, totalBookmarks] = await Promise.all([

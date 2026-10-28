@@ -2,7 +2,9 @@
 
 import {
   AiProviderController,
+  AppLockController,
   BookmarkPublicationController,
+  BookmarkShareController,
   CredentialsController,
   PublicBookmarkController,
   PublicTagController,
@@ -13,7 +15,11 @@ import {
   UserReadLaterController,
   UserTagController,
   aiProvidersConfigSchema,
+  appLockConfigSchema,
+  appLockResetSchema,
+  appLockVerifySchema,
   bookmarkPublishInputSchema,
+  bookmarkShareCodeSchema,
   deletePublicTagsSchema,
   deleteUserTagsSchema,
   duplicateAiProviderSchema,
@@ -138,6 +144,21 @@ export const actUpdateReadLaterItem = make(UserReadLaterController.update, {
 /// User preferences
 export const actUpdateUserPreferences = make(UserPreferenceController.update, {
   schema: userPreferencesSchema,
+})
+
+/// 应用锁
+export const actSaveAppLock = make(AppLockController.save, { schema: appLockConfigSchema })
+export const actDisableAppLock = make(AppLockController.disable)
+export const actVerifyAppLock = make(AppLockController.verify, { schema: appLockVerifySchema })
+export const actResetAppLockWithPassword = make(AppLockController.resetWithPassword, {
+  schema: appLockResetSchema,
+})
+export const actLockApp = make(AppLockController.lock)
+
+/// 书签分享
+export const actCreateBookmarkShare = make(BookmarkShareController.create)
+export const actResolveBookmarkShare = make(BookmarkShareController.resolve, {
+  schema: bookmarkShareCodeSchema,
 })
 
 /// Users

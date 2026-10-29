@@ -37,6 +37,11 @@ function formatExpiresAt(expiresAt: Date | null) {
   })
 }
 
+function getRemainingDays(expiresAt: Date | null) {
+  if (!expiresAt) return 7
+  return Math.max(1, Math.ceil((expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+}
+
 /** 剪贴板不可用时的降级复制方案 */
 function fallbackCopy(text: string) {
   const textarea = document.createElement('textarea')
@@ -80,26 +85,30 @@ export default function BookmarkShareButton(props: Props) {
     setState({ loading: false })
   }
 
+  const expiresText = formatExpiresAt(state.expiresAt)
+  const remainingDays = getRemainingDays(state.expiresAt)
+  const shareText = state.code
+    ? `分享给你一个书签，口令：${state.code}，${remainingDays} 天内有效。`
+    : ''
+  const preview = state.preview
+
   async function onCopy() {
-    if (!state.code) return
+    if (!shareText) return
     try {
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(state.code)
-        addToast({ color: 'success', title: '口令已复制' })
+        await navigator.clipboard.writeText(shareText)
+        addToast({ color: 'success', title: '分享文案已复制' })
         return
       }
     } catch {
       // 无剪贴板权限时走下方的降级逻辑
     }
-    if (fallbackCopy(state.code)) {
-      addToast({ color: 'success', title: '口令已复制' })
+    if (fallbackCopy(shareText)) {
+      addToast({ color: 'success', title: '分享文案已复制' })
       return
     }
     addToast({ color: 'warning', title: '复制失败', description: '请选中口令后手动复制' })
   }
-
-  const expiresText = formatExpiresAt(state.expiresAt)
-  const preview = state.preview
 
   return (
     <>
@@ -179,7 +188,9 @@ export default function BookmarkShareButton(props: Props) {
                 />
                 <p className="text-default-500 flex items-center gap-1.5 text-xs">
                   <span className={IconNames.Tabler.SHARE} />
-                  <span>7 天内有效{expiresText ? `（至 ${expiresText}）` : ''}</span>
+                  <span>
+                    {remainingDays} 天内有效{expiresText ? `（至 ${expiresText}）` : ''}
+                  </span>
                 </p>
               </ModalBody>
               <ModalFooter>

@@ -71,6 +71,7 @@ export const IconNames = {
     BRAND_GITHUB: 'icon-[tabler--brand-github]',
     CHECK: 'icon-[tabler--check]',
     CHECKBOX: 'icon-[tabler--checkbox]',
+    CLOCK: 'icon-[tabler--clock]',
     CIRCLE_CHECK: 'icon-[tabler--circle-check]',
     CIRCLE_X: 'icon-[tabler--circle-x]',
     CHEVRON_DOWN: 'icon-[tabler--chevron-down]',

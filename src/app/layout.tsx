@@ -8,6 +8,7 @@ import {
 } from '@/controllers'
 import '@/globals.css'
 import { auth } from '@/lib/auth'
+import { DEFAULT_APP_LOCK_IDLE_MINUTES } from '@/lib/app-lock-constants'
 import { AntdRegistry } from '@ant-design/nextjs-registry'
 import { Assets, WEBSITE_KEYWORDS, WEBSITE_NAME } from '@cfg'
 import { GoogleAnalytics, GoogleTagManager } from '@next/third-parties/google'
@@ -43,7 +44,14 @@ export default async function RootLayout({ children }: PropsWithChildren) {
         UserPreferenceController.get(session.user.id),
         AppLockController.getSettings(session.user.id),
       ])
-    : [DEFAULT_USER_PREFERENCES, { enabled: false, method: null }]
+    : [
+        DEFAULT_USER_PREFERENCES,
+        {
+          enabled: false,
+          method: null,
+          idleMinutes: DEFAULT_APP_LOCK_IDLE_MINUTES,
+        },
+      ]
 
   return (
     <html lang="zh-CN" className="bg-background text-foreground min-w-xs" suppressHydrationWarning>
@@ -55,9 +63,11 @@ export default async function RootLayout({ children }: PropsWithChildren) {
           <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID} />
         )}
         <AppBackground />
-        <GlobalProvider session={session}>
+        <GlobalProvider session={session} appLockEnabled={appLock.enabled}>
           <UserPreferenceProvider initialLayout={preferences.mobileBookmarkLayout}>
-            {appLock.enabled && session?.user.id && <AppLockIdleGuard userId={session.user.id} />}
+            {appLock.enabled && session?.user.id && (
+              <AppLockIdleGuard userId={session.user.id} idleMinutes={appLock.idleMinutes} />
+            )}
             <AntdRegistry>{children}</AntdRegistry>
           </UserPreferenceProvider>
         </GlobalProvider>

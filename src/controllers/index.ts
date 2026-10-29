@@ -11,6 +11,7 @@ export {
   APP_LOCK_METHODS,
   appLockConfigSchema,
   appLockDisableSchema,
+  appLockIdleSchema,
   appLockResetSchema,
   appLockVerifySchema,
   default as AppLockController,

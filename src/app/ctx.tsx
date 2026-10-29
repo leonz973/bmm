@@ -11,8 +11,9 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useReportWebVitals } from 'next/web-vitals'
 import { createContext, PropsWithChildren, useContext, useMemo } from 'react'
 
-// 全局上下文（先占个坑）
-interface GlobalContextType {}
+interface GlobalContextType {
+  appLockEnabled: boolean
+}
 
 const GlobalContext = createContext<GlobalContextType | null>(null)
 
@@ -44,6 +45,7 @@ function AntdConfigProviderWrapper({ children }: PropsWithChildren) {
 
 interface Props {
   session: Session | null
+  appLockEnabled?: boolean
 }
 export function GlobalProvider(props: PropsWithChildren<Props>) {
   const pathname = usePathname()
@@ -58,7 +60,10 @@ export function GlobalProvider(props: PropsWithChildren<Props>) {
   })
   const router = useRouter()
 
-  const ctxValue = useMemo<GlobalContextType>(() => ({}), [])
+  const ctxValue = useMemo<GlobalContextType>(
+    () => ({ appLockEnabled: Boolean(props.appLockEnabled) }),
+    [props.appLockEnabled]
+  )
   const forceTheme = pathname === PageRoutes.LOGIN ? 'light' : undefined
 
   return (

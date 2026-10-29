@@ -1,4 +1,5 @@
 import { AppLockController } from '@/controllers'
+import { DEFAULT_APP_LOCK_IDLE_MINUTES } from '@/lib/app-lock-constants'
 import { auth } from '@/lib/auth'
 import ClientPage from './ClientPage'
 
@@ -11,7 +12,11 @@ export default async function Page() {
   const userId = session?.user.id
   const appLock = userId
     ? await AppLockController.getSettings(userId)
-    : { enabled: false, method: null }
+    : {
+        enabled: false,
+        method: null,
+        idleMinutes: DEFAULT_APP_LOCK_IDLE_MINUTES,
+      }
 
   return (
     <ClientPage

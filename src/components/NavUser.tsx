@@ -1,10 +1,12 @@
 import { actLockApp } from '@/actions'
+import { useGlobalContext } from '@/app/ctx'
 import ReButton from '@/components/re-export/ReButton'
 import { usePageUtil } from '@/hooks'
 import { runAction } from '@/utils/client'
 import { IconNames, PageRoutes } from '@cfg'
 import { Avatar, Divider, Listbox, ListboxItem, ListboxSection, addToast, cn } from '@heroui/react'
 import { signOut, useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { IconButtonProps } from './common'
 
 const MENU_ITEM_ICON_CLS = 'text-base translate-y-0.5'
@@ -13,7 +15,18 @@ export function NavUser() {
   const session = useSession()
   const user = session.data?.user
   const pageUtil = usePageUtil()
+  const router = useRouter()
+  const { appLockEnabled } = useGlobalContext()
   const isAuthenticated = session.status === 'authenticated'
+
+  async function handleLockApp() {
+    const result = await runAction(actLockApp(), { okMsg: '应用已锁定' })
+    if (!result.ok) return
+
+    // 公开页没有应用锁门禁，锁定后进入个人空间以立即展示锁屏
+    if (pageUtil.isUserSpace || pageUtil.isAdminSpace) router.refresh()
+    else router.push(PageRoutes.User.SPACE)
+  }
 
   async function handleSignOut() {
     // 退出登录时同时清掉应用锁解锁凭据，避免下次登录直接跳过应用锁
@@ -102,6 +115,14 @@ export function NavUser() {
                     className={cn(IconNames.Tabler.EXTERNAL_LINK, 'text-default-400 text-sm')}
                   />
                 </span>
+              </ListboxItem>
+            </ListboxSection>
+            <ListboxSection showDivider hidden={!appLockEnabled}>
+              <ListboxItem
+                onPress={handleLockApp}
+                startContent={<span className={cn(IconNames.Tabler.LOCK, MENU_ITEM_ICON_CLS)} />}
+              >
+                立即锁定
               </ListboxItem>
             </ListboxSection>
             <ListboxItem

@@ -1,5 +1,6 @@
 import { db, schema } from '@/db'
 import { clearAppUnlockCookie, isAppUnlocked, setAppUnlocked } from '@/lib/app-lock'
+import { DEFAULT_APP_LOCK_IDLE_MINUTES, type AppLockIdleMinutes } from '@/lib/app-lock-constants'
 import { auth } from '@/lib/auth'
 import { z } from '@/lib/zod'
 import crypto from 'crypto'
@@ -29,11 +30,19 @@ export const appLockDisableSchema = z.object({
   password: z.string().optional(),
 })
 
+export const appLockIdleSchema = z.object({
+  idleMinutes: z.union([z.literal(1), z.literal(5), z.literal(10), z.literal(30)]),
+})
+
 const appLockStoredSchema = z.object({
   enabled: z.boolean(),
   method: z.enum(APP_LOCK_METHODS),
   hash: z.string(),
   salt: z.string(),
+  /** 旧配置没有该字段时按默认 30 分钟处理 */
+  idleMinutes: z
+    .union([z.literal(1), z.literal(5), z.literal(10), z.literal(30)])
+    .default(DEFAULT_APP_LOCK_IDLE_MINUTES),
 })
 
 type AppLockStored = z.output<typeof appLockStoredSchema>
@@ -41,6 +50,7 @@ type AppLockStored = z.output<typeof appLockStoredSchema>
 export interface AppLockSettings {
   enabled: boolean
   method: AppLockMethod | null
+  idleMinutes: AppLockIdleMinutes
 }
 
 export interface AppLockGateState extends AppLockSettings {
@@ -99,19 +109,25 @@ const AppLockController = {
     const targetUserId = userId || (await getSessionUserId())
     const stored = await findStoredConfig(targetUserId)
     return stored?.enabled
-      ? { enabled: true, method: stored.method }
-      : { enabled: false, method: null }
+      ? { enabled: true, method: stored.method, idleMinutes: stored.idleMinutes }
+      : { enabled: false, method: null, idleMinutes: DEFAULT_APP_LOCK_IDLE_MINUTES }
   },
 
   /** 服务端布局使用：返回是否开启、解锁方式以及当前请求是否已解锁 */
   async getGateState(userId: UserId): Promise<AppLockGateState> {
     const stored = await findStoredConfig(userId)
     if (!stored?.enabled) {
-      return { enabled: false, method: null, unlocked: true }
+      return {
+        enabled: false,
+        method: null,
+        idleMinutes: DEFAULT_APP_LOCK_IDLE_MINUTES,
+        unlocked: true,
+      }
     }
     return {
       enabled: true,
       method: stored.method,
+      idleMinutes: stored.idleMinutes,
       unlocked: await isAppUnlocked(userId),
     }
   },
@@ -120,6 +136,7 @@ const AppLockController = {
     const session = await auth()
     if (!session?.user.id) throw new Error('请先登录')
 
+    const existing = await findStoredConfig(session.user.id)
     const secret = normalizeSecret(input.method, input.secret)
     const salt = crypto.randomBytes(16).toString('hex')
     const value: AppLockStored = {
@@ -127,6 +144,7 @@ const AppLockController = {
       method: input.method,
       hash: hashSecret(secret, salt),
       salt,
+      idleMinutes: existing?.idleMinutes ?? DEFAULT_APP_LOCK_IDLE_MINUTES,
     }
 
     await db
@@ -145,7 +163,29 @@ const AppLockController = {
 
     // 刚设置成功时视为已通过校验，避免立刻把当前会话锁在门外
     await setAppUnlocked(session.user.id)
-    return { enabled: true, method: input.method }
+    return { enabled: true, method: input.method, idleMinutes: value.idleMinutes }
+  },
+
+  /** 只更新自动锁定时间，不要求重新设置解锁密码 */
+  async updateIdle(input: z.output<typeof appLockIdleSchema>): Promise<AppLockSettings> {
+    const session = await auth()
+    if (!session?.user.id) throw new Error('请先登录')
+
+    const stored = await findStoredConfig(session.user.id)
+    if (!stored?.enabled) throw new Error('应用锁未开启')
+
+    const value: AppLockStored = { ...stored, idleMinutes: input.idleMinutes }
+    await db
+      .update(schema.userConfigs)
+      .set({ value, updatedAt: new Date() })
+      .where(
+        and(
+          eq(schema.userConfigs.userId, session.user.id),
+          eq(schema.userConfigs.key, APP_LOCK_KEY)
+        )
+      )
+
+    return { enabled: true, method: stored.method, idleMinutes: input.idleMinutes }
   },
 
   async disable(input: z.output<typeof appLockDisableSchema> = {}): Promise<AppLockSettings> {
@@ -180,7 +220,7 @@ const AppLockController = {
         )
       )
     await clearAppUnlockCookie()
-    return { enabled: false, method: null }
+    return { enabled: false, method: null, idleMinutes: DEFAULT_APP_LOCK_IDLE_MINUTES }
   },
 
   async verify(input: z.output<typeof appLockVerifySchema>) {
@@ -218,7 +258,7 @@ const AppLockController = {
         )
       )
     await setAppUnlocked(session.user.id)
-    return { enabled: false }
+    return { enabled: false, method: null, idleMinutes: DEFAULT_APP_LOCK_IDLE_MINUTES }
   },
 
   /** 立即上锁：清除当前浏览器的解锁凭据 */

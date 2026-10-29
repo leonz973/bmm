@@ -1,13 +1,13 @@
 'use client'
 
 import { actLockApp } from '@/actions'
-import { APP_LOCK_ACTIVITY_KEY, APP_LOCK_IDLE_MS } from '@/lib/app-lock-constants'
+import { APP_LOCK_ACTIVITY_KEY, type AppLockIdleMinutes } from '@/lib/app-lock-constants'
 import { runAction } from '@/utils/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 
-/** 空闲检查间隔 */
-const IDLE_CHECK_INTERVAL_MS = 30 * 1000
+/** 空闲检查间隔，保证 1 分钟档位也能及时触发 */
+const IDLE_CHECK_INTERVAL_MS = 15 * 1000
 
 function readLastActive(activityKey: string) {
   try {
@@ -21,6 +21,7 @@ function readLastActive(activityKey: string) {
 
 interface Props {
   userId: string
+  idleMinutes: AppLockIdleMinutes
 }
 
 export function AppLockIdleGuard(props: Props) {
@@ -28,6 +29,7 @@ export function AppLockIdleGuard(props: Props) {
   const lockingRef = useRef(false)
   const lastActiveRef = useRef(0)
   const activityKey = `${APP_LOCK_ACTIVITY_KEY}:${props.userId}`
+  const idleMs = props.idleMinutes * 60 * 1000
 
   useEffect(() => {
     function markActive() {
@@ -47,7 +49,7 @@ export function AppLockIdleGuard(props: Props) {
         markActive()
         return false
       }
-      if (Date.now() - lastActive < APP_LOCK_IDLE_MS) return false
+      if (Date.now() - lastActive < idleMs) return false
 
       lockingRef.current = true
       const result = await runAction(actLockApp(), { errToast: { hidden: true } })
@@ -96,7 +98,7 @@ export function AppLockIdleGuard(props: Props) {
       document.removeEventListener('scroll', handleActivity, true)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [activityKey, router])
+  }, [activityKey, idleMs, router])
 
   return null
 }

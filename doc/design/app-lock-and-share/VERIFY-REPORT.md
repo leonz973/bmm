@@ -1,7 +1,7 @@
 # 应用锁与书签分享口令 — 端到端验收报告
 
-- 执行人：verifier（初始版本）+ Captain（2026-10-29 短口令/剪贴板更新）
-- 时间：2026-10-28 17:00–17:35；2026-10-29 09:00–13:50（Asia/Hong_Kong）
+- 执行人：verifier（初始版本）+ Captain（2026-10-29 短口令/剪贴板/自动锁定更新）
+- 时间：2026-10-28 17:00–17:35；2026-10-29 09:00–14:30（Asia/Hong_Kong）
 - 仓库：D:\code\bmm
 - 结论：**通过**（无 blocker；剩余 4 条低优先级说明）
 
@@ -17,6 +17,8 @@
 | 锁屏不渲染业务数据 | 通过 | 实机锁屏 DOM 仅含“应用已锁定/解锁控件/忘记密码/退出登录”，无书签数、标签数 |
 | 短口令 | 通过 | `BMM-XXXXXXXX`，8 位大写字母/数字（去掉 I/O/0/1）；复用 `userConfigs` 存储，不新增表、无需迁移 |
 | 输入清洗 | 通过 | `normalizeBookmarkShareCode` 可从“请查收 BMM-XXXXXXXX，谢谢”中提取口令；支持不带前缀的 8 位口令 |
+| 自动锁定档位 | 通过 | 1/5/10/30 分钟四档；`appLockIdleSchema` 拒绝其他值；旧配置缺省按 30 分钟；修改解锁方式保留档位 |
+| 手动锁定 | 通过 | 头像菜单仅在应用锁开启时显示「立即锁定」；点击清除当前浏览器解锁 Cookie 并进入个人空间锁屏 |
 | 错误提示合理 | 通过 | 空口令“请输入分享口令”；非法/过期“口令无效或已过期”；书签删除“口令对应的书签不存在或已被删除”；错误图案/密码“解锁密码错误，请重试” |
 
 ## 2. 静态验证（最终代码）
@@ -24,9 +26,9 @@
 | 命令 | 结果 |
 | --- | --- |
 | `pnpm exec tsc --noEmit --pretty false` | 通过（exit 0） |
-| `pnpm exec vitest run` | 通过：27 个文件 passed、1 skipped；179 tests passed、3 skipped（182） |
+| `pnpm exec vitest run` | 通过：27 个文件 passed、1 skipped；182 tests passed、3 skipped（185） |
 | `pnpm lint` | 仅既存错误：`src/app/user/read-later/ClientPage.tsx:430` `react-hooks/set-state-in-effect`（exit 1） |
-| `pnpm exec eslint <全部改动/新增文件>` | 通过（exit 0） |
+| `pnpm exec eslint <本次改动文件>` | 通过（exit 0） |
 
 ## 3. 运行时验证（真实页面，Chromium + CDP）
 
@@ -45,10 +47,12 @@
 3. 跨用户不共享解锁态；390x844 移动端布局正常。
 4. 应用锁设置了 `userId` 绑定的会话 Cookie；退出登录会清除解锁凭据。
 5. 关闭应用锁时必须验证：默认输入当前应用锁密码（九宫格/数字密码），也可切换为账号密码；错误 PIN 提示“应用锁密码错误，请重试”，正确 PIN 可关闭；账号密码路径有单元测试覆盖。
+6. 自动锁定时间：在偏好设置选择「5 分钟」，出现“自动锁定已设置为 5 分钟”提示；刷新后仍为 5 分钟，卡片说明同步显示“5 分钟无操作会自动重新上锁”。1/5/10/30 档位和非法值拒绝由 `app-lock.test.ts` 覆盖（9 tests passed）。
+7. 手动锁定：应用锁开启时头像菜单出现「立即锁定」；点击后进入 `/user/space` 并直接显示“应用已锁定”数字密码锁屏，需重新输入 PIN 才能进入。
 
 ## 4. 发现（低优先级，无 blocker）
 
-1. `src/lib/app-lock.ts:25-32` — 解锁 Cookie 未使用 `issuedAt` 做服务端超时判断；30 分钟空闲依赖客户端 `AppLockIdleGuard`。这是为了不误锁持续活跃用户，浏览器关闭仍由会话 Cookie 兜底。
+1. `src/lib/app-lock.ts:25-32` — 解锁 Cookie 未使用 `issuedAt` 做服务端超时判断；1/5/10/30 分钟空闲超时依赖客户端 `AppLockIdleGuard`。这是为了不误锁持续活跃用户，浏览器关闭仍由会话 Cookie 兜底。
 2. `src/components/app-lock/AppLockPatternPad.tsx:118-133` — 九宫格仅支持指针绘制，键盘/读屏用户无法独立使用（有“忘记解锁密码”兜底，可改用数字密码）。
 3. `src/components/BookmarkShareImport.tsx` — 自动读取剪贴板依赖浏览器安全上下文和权限（HTTPS 或 localhost）；HTTP 部署下浏览器可能拒绝，此时仍可手动粘贴，`onValueChange` 同样会自动过滤文字。
 4. `src/app/layout.tsx:41-47` — 公开页也会查询应用锁配置，每请求多一次 DB 查询；当前数据量下可接受。
@@ -57,6 +61,9 @@
 
 - `D:\code\bmm\doc\design\app-lock-and-share\settings-lock-light.png`（1440x900）
 - `D:\code\bmm\doc\design\app-lock-and-share\settings-lock-dark.png`（1440x900）
+- `D:\code\bmm\doc\design\app-lock-and-share\settings-idle.png`（1440x900，自动锁定时间）
+- `D:\code\bmm\doc\design\app-lock-and-share\settings-manual-lock-menu.png`（1440x900，头像菜单立即锁定）
+- `D:\code\bmm\doc\design\app-lock-and-share\manual-lock-screen.png`（1440x900，立即锁定后的锁屏）
 - `D:\code\bmm\doc\design\app-lock-and-share\app-lock-disable-modal.png`（1440x900，关闭应用锁验证）
 - `D:\code\bmm\doc\design\app-lock-and-share\lock-pattern.png`（1440x900）
 - `D:\code\bmm\doc\design\app-lock-and-share\lock-pin.png`（1440x900）
@@ -69,5 +76,6 @@
 ## 6. 清理
 
 - 已删除 `shot@example.com` 测试用户及其级联数据（测试书签、标签、分享口令、应用锁配置）。
+- 已删除本次自动锁定验收用的 `shot-idle@example.com` 测试用户及其应用锁配置。
 - 已停止验收用 headless Chromium 并删除临时 profile。
-- dev server：端口 3100 的 `next dev`（PID 41896）在验收开始前已存在，非本次启动，未擅自终止。
+- dev server：本次验收临时启动的 `next dev` 已停止；未修改仓库配置。

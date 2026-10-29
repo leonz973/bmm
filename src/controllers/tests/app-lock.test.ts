@@ -1,4 +1,4 @@
-import AppLockController from '@/controllers/AppLock.controller'
+import AppLockController, { appLockIdleSchema } from '@/controllers/AppLock.controller'
 import { db, schema } from '@/db'
 import { faker } from '@faker-js/faker'
 import crypto from 'crypto'
@@ -51,10 +51,18 @@ describe('AppLockController', () => {
     if (userId) await db.delete(users).where(eq(users.id, userId))
   })
 
+  test('自动锁定时间只接受 1/5/10/30 分钟', () => {
+    for (const idleMinutes of [1, 5, 10, 30]) {
+      expect(appLockIdleSchema.safeParse({ idleMinutes }).success).toBe(true)
+    }
+    expect(appLockIdleSchema.safeParse({ idleMinutes: 2 }).success).toBe(false)
+  })
+
   test('默认未开启应用锁', async () => {
     await expect(AppLockController.getSettings()).resolves.toEqual({
       enabled: false,
       method: null,
+      idleMinutes: 30,
     })
   })
 
@@ -62,11 +70,13 @@ describe('AppLockController', () => {
     await expect(AppLockController.save({ method: 'pin', secret: '1234' })).resolves.toEqual({
       enabled: true,
       method: 'pin',
+      idleMinutes: 30,
     })
 
     await expect(AppLockController.getGateState(userId)).resolves.toEqual({
       enabled: true,
       method: 'pin',
+      idleMinutes: 30,
       unlocked: true,
     })
 
@@ -75,6 +85,25 @@ describe('AppLockController', () => {
     })
     expect(row?.key).toBe('user.appLock')
     expect(JSON.stringify(row?.value)).not.toContain('1234')
+  })
+
+  test('自动锁定时间可单独更新，修改解锁方式时保留设置', async () => {
+    await expect(AppLockController.updateIdle({ idleMinutes: 5 })).resolves.toEqual({
+      enabled: true,
+      method: 'pin',
+      idleMinutes: 5,
+    })
+    await expect(AppLockController.getGateState(userId)).resolves.toMatchObject({
+      enabled: true,
+      idleMinutes: 5,
+    })
+
+    await AppLockController.save({ method: 'pin', secret: '1234' })
+    await expect(AppLockController.getSettings()).resolves.toEqual({
+      enabled: true,
+      method: 'pin',
+      idleMinutes: 5,
+    })
   })
 
   test('错误的解锁密码会被拒绝，正确密码可以解锁', async () => {
@@ -109,10 +138,12 @@ describe('AppLockController', () => {
     await expect(AppLockController.disable({ secret: '1234' })).resolves.toEqual({
       enabled: false,
       method: null,
+      idleMinutes: 30,
     })
     await expect(AppLockController.getSettings()).resolves.toEqual({
       enabled: false,
       method: null,
+      idleMinutes: 30,
     })
   })
 
@@ -124,6 +155,11 @@ describe('AppLockController', () => {
     await expect(AppLockController.disable({ password: 'locktest123' })).resolves.toEqual({
       enabled: false,
       method: null,
+      idleMinutes: 30,
     })
+  })
+
+  test('应用锁关闭时不能更新自动锁定时间', async () => {
+    await expect(AppLockController.updateIdle({ idleMinutes: 1 })).rejects.toThrow('应用锁未开启')
   })
 })

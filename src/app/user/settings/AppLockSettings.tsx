@@ -1,10 +1,11 @@
 'use client'
 
-import { actDisableAppLock, actSaveAppLock } from '@/actions'
+import { actDisableAppLock, actSaveAppLock, actUpdateAppLockIdle } from '@/actions'
 import AppLockPatternPad from '@/components/app-lock/AppLockPatternPad'
 import AppLockPinPad from '@/components/app-lock/AppLockPinPad'
 import ReInput from '@/components/re-export/ReInput'
 import type { AppLockMethod, AppLockSettings } from '@/controllers'
+import { APP_LOCK_IDLE_OPTIONS, type AppLockIdleMinutes } from '@/lib/app-lock-constants'
 import { runAction } from '@/utils/client'
 import { IconNames } from '@cfg'
 import {
@@ -53,6 +54,9 @@ export default function AppLockSettings(props: Props) {
   const [pinValue, setPinValue] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const [idleSaving, setIdleSaving] = useState(false)
+  const [idleError, setIdleError] = useState('')
 
   const [disableOpen, setDisableOpen] = useState(false)
   const [disabling, setDisabling] = useState(false)
@@ -145,6 +149,22 @@ export default function AppLockSettings(props: Props) {
     setSaving(false)
   }
 
+  async function handleIdleChange(idleMinutes: AppLockIdleMinutes) {
+    if (idleSaving || settings.idleMinutes === idleMinutes) return
+
+    setIdleSaving(true)
+    setIdleError('')
+    const result = await runAction(actUpdateAppLockIdle({ idleMinutes }), {
+      okMsg: `自动锁定已设置为 ${idleMinutes} 分钟`,
+      onOk(data) {
+        setSettings(data)
+        router.refresh()
+      },
+    })
+    if (!result.ok) setIdleError(result.message)
+    setIdleSaving(false)
+  }
+
   function handleDraftComplete(secret: string) {
     if (saving) return
 
@@ -230,7 +250,10 @@ export default function AppLockSettings(props: Props) {
               <div className="min-w-0">
                 <h2 className="text-base font-semibold">应用锁</h2>
                 <p className="text-default-500 mt-1 text-sm leading-6">
-                  进入个人空间与后台前需要验证九宫格或数字密码，30 分钟无操作会自动重新上锁。
+                  进入个人空间与后台前需要验证九宫格或数字密码，
+                  {settings.enabled
+                    ? `${settings.idleMinutes} 分钟无操作会自动重新上锁。`
+                    : '开启后可设置自动锁定时间。'}
                 </p>
               </div>
             </div>
@@ -259,14 +282,51 @@ export default function AppLockSettings(props: Props) {
           </div>
 
           {settings.enabled && (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="flat" onPress={openSetup}>
-                修改解锁方式
-              </Button>
-              <Button size="sm" variant="light" color="danger" onPress={() => setDisableOpen(true)}>
-                关闭应用锁
-              </Button>
-            </div>
+            <>
+              <div className="border-divider/60 dark:bg-default-100/5 mt-4 flex flex-col gap-2 rounded-xl border bg-white/35 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className={cn(IconNames.Tabler.CLOCK, 'text-default-500 text-base')} />
+                  <span>自动锁定时间</span>
+                </div>
+                <div
+                  role="group"
+                  aria-label="自动锁定时间"
+                  className="flex flex-wrap items-center gap-1.5"
+                >
+                  {APP_LOCK_IDLE_OPTIONS.map((minutes) => {
+                    const selected = settings.idleMinutes === minutes
+                    return (
+                      <Button
+                        key={minutes}
+                        size="sm"
+                        variant={selected ? 'flat' : 'light'}
+                        color={selected ? 'primary' : 'default'}
+                        isDisabled={idleSaving || saving || disabling}
+                        aria-pressed={selected}
+                        onPress={() => void handleIdleChange(minutes)}
+                      >
+                        {minutes} 分钟
+                      </Button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="min-h-5 text-center" aria-live="polite">
+                {idleError ? (
+                  <span role="alert" className="text-danger text-sm">
+                    {idleError}
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="flat" onPress={openSetup}>
+                  修改解锁方式
+                </Button>
+                <Button size="sm" variant="light" color="danger" onPress={openDisable}>
+                  关闭应用锁
+                </Button>
+              </div>
+            </>
           )}
         </CardBody>
       </Card>

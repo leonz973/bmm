@@ -176,7 +176,14 @@ pnpm start
 
 ### Docker 部署
 
-项目自带 [`Dockerfile`](./Dockerfile)。下面示例使用 SQLite 挂载数据卷：
+项目自带 [`Dockerfile`](./Dockerfile)，也可以直接拉取预构建镜像：
+
+```bash
+docker pull leonz973/bmm:latest       # Docker Hub
+docker pull ghcr.io/leonz973/bmm:latest  # GitHub Container Registry
+```
+
+下面示例使用 SQLite 挂载数据卷（自行构建时把 `leonz973/bmm:latest` 换成 `bmm`）：
 
 ```bash
 docker build -t bmm .

@@ -176,7 +176,14 @@ pnpm start
 
 ### Docker Deployment
 
-The repository includes a ready-to-use [`Dockerfile`](./Dockerfile). The example below uses SQLite with a mounted volume:
+The repository includes a ready-to-use [`Dockerfile`](./Dockerfile), or you can pull a prebuilt image:
+
+```bash
+docker pull leonz973/bmm:latest       # Docker Hub
+docker pull ghcr.io/leonz973/bmm:latest  # GitHub Container Registry
+```
+
+The example below uses SQLite with a mounted volume (replace `leonz973/bmm:latest` with `bmm` if you build locally):
 
 ```bash
 docker build -t bmm .

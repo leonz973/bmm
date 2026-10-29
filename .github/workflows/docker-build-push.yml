@@ -90,3 +90,15 @@ jobs:
           tag_name: 1.0.${{ github.run_number }}
           name: 1.0.${{ github.run_number }}
           generate_release_notes: true
+
+      # 同步 Docker Hub 仓库概览（README 内容）与一句话简介
+      - name: Update Docker Hub description
+        if: steps.meta.outputs.dockerhub == 'true'
+        continue-on-error: true
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/bmm
+          short-description: BMM：开源自托管书签管理器，支持标签整理与 AI 辅助
+          readme-filepath: ./doc/dockerhub-overview.md

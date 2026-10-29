@@ -1,6 +1,7 @@
 import AppLockController from '@/controllers/AppLock.controller'
 import { db, schema } from '@/db'
 import { faker } from '@faker-js/faker'
+import crypto from 'crypto'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
 
@@ -22,7 +23,7 @@ vi.mock('next/headers', () => ({
   headers: async () => new Headers(),
 }))
 
-const { users, userConfigs } = schema
+const { users, userConfigs, credentials } = schema
 
 describe('AppLockController', () => {
   const suffix = faker.string.alphanumeric(8)
@@ -40,6 +41,10 @@ describe('AppLockController', () => {
     userId = user.id
     currentUser.id = userId
     currentUser.email = user.email
+
+    const salt = 'app-lock-test-salt'
+    const hash = crypto.pbkdf2Sync('locktest123', salt, 1000, 32, 'sha256').toString('hex')
+    await db.insert(credentials).values({ userId, password: hash, salt })
   })
 
   afterAll(async () => {
@@ -96,12 +101,27 @@ describe('AppLockController', () => {
     )
   })
 
-  test('关闭应用锁会清除配置与解锁凭据', async () => {
-    await expect(AppLockController.disable()).resolves.toEqual({
+  test('关闭应用锁必须验证应用锁密码或账号密码', async () => {
+    await expect(AppLockController.disable({})).rejects.toThrow('请输入应用锁密码或账号密码')
+    await expect(AppLockController.disable({ secret: '0000' })).rejects.toThrow('应用锁密码错误')
+    await expect(AppLockController.getSettings()).resolves.toMatchObject({ enabled: true })
+
+    await expect(AppLockController.disable({ secret: '1234' })).resolves.toEqual({
       enabled: false,
       method: null,
     })
     await expect(AppLockController.getSettings()).resolves.toEqual({
+      enabled: false,
+      method: null,
+    })
+  })
+
+  test('可以使用账号密码关闭应用锁', async () => {
+    await AppLockController.save({ method: 'pin', secret: '1234' })
+    await expect(AppLockController.disable({ password: 'wrong123' })).rejects.toThrow(
+      '邮箱或密码错误'
+    )
+    await expect(AppLockController.disable({ password: 'locktest123' })).resolves.toEqual({
       enabled: false,
       method: null,
     })

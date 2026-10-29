@@ -24,6 +24,11 @@ export const appLockResetSchema = z.object({
   password: z.string().min(1, '请输入账号密码'),
 })
 
+export const appLockDisableSchema = z.object({
+  secret: z.string().optional(),
+  password: z.string().optional(),
+})
+
 const appLockStoredSchema = z.object({
   enabled: z.boolean(),
   method: z.enum(APP_LOCK_METHODS),
@@ -143,9 +148,28 @@ const AppLockController = {
     return { enabled: true, method: input.method }
   },
 
-  async disable(): Promise<AppLockSettings> {
+  async disable(input: z.output<typeof appLockDisableSchema> = {}): Promise<AppLockSettings> {
     const session = await auth()
     if (!session?.user.id) throw new Error('请先登录')
+
+    const stored = await findStoredConfig(session.user.id)
+    if (stored?.enabled) {
+      if (input.password) {
+        if (!session.user.email) {
+          throw new Error('当前账号未设置密码，无法通过账号密码关闭应用锁')
+        }
+        await CredentialsController.verify({
+          email: session.user.email,
+          password: input.password,
+        })
+      } else if (input.secret) {
+        if (!verifySecret(input.secret, stored)) {
+          throw new Error('应用锁密码错误，请重试')
+        }
+      } else {
+        throw new Error('请输入应用锁密码或账号密码')
+      }
+    }
 
     await db
       .delete(schema.userConfigs)

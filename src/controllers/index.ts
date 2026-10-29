@@ -10,6 +10,7 @@ export type { SelectUserBookmark } from './UserBookmark.controller'
 export {
   APP_LOCK_METHODS,
   appLockConfigSchema,
+  appLockDisableSchema,
   appLockResetSchema,
   appLockVerifySchema,
   default as AppLockController,

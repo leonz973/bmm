@@ -1,7 +1,7 @@
 # 应用锁与书签分享口令 — 端到端验收报告
 
 - 执行人：verifier（初始版本）+ Captain（2026-10-29 短口令/剪贴板更新）
-- 时间：2026-10-28 17:00–17:35；2026-10-29 09:00–09:30（Asia/Hong_Kong）
+- 时间：2026-10-28 17:00–17:35；2026-10-29 09:00–13:50（Asia/Hong_Kong）
 - 仓库：D:\code\bmm
 - 结论：**通过**（无 blocker；剩余 4 条低优先级说明）
 
@@ -24,7 +24,7 @@
 | 命令 | 结果 |
 | --- | --- |
 | `pnpm exec tsc --noEmit --pretty false` | 通过（exit 0） |
-| `pnpm exec vitest run` | 通过：27 个文件 passed、1 skipped；178 tests passed、3 skipped（181） |
+| `pnpm exec vitest run` | 通过：27 个文件 passed、1 skipped；179 tests passed、3 skipped（182） |
 | `pnpm lint` | 仅既存错误：`src/app/user/read-later/ClientPage.tsx:430` `react-hooks/set-state-in-effect`（exit 1） |
 | `pnpm exec eslint <全部改动/新增文件>` | 通过（exit 0） |
 
@@ -44,6 +44,7 @@
 2. 退出登录后重新登录会出现锁屏，且锁屏不渲染业务数据；空闲 31 分钟自动上锁，刷新保持锁定。
 3. 跨用户不共享解锁态；390x844 移动端布局正常。
 4. 应用锁设置了 `userId` 绑定的会话 Cookie；退出登录会清除解锁凭据。
+5. 关闭应用锁时必须验证：默认输入当前应用锁密码（九宫格/数字密码），也可切换为账号密码；错误 PIN 提示“应用锁密码错误，请重试”，正确 PIN 可关闭；账号密码路径有单元测试覆盖。
 
 ## 4. 发现（低优先级，无 blocker）
 
@@ -56,6 +57,7 @@
 
 - `D:\code\bmm\doc\design\app-lock-and-share\settings-lock-light.png`（1440x900）
 - `D:\code\bmm\doc\design\app-lock-and-share\settings-lock-dark.png`（1440x900）
+- `D:\code\bmm\doc\design\app-lock-and-share\app-lock-disable-modal.png`（1440x900，关闭应用锁验证）
 - `D:\code\bmm\doc\design\app-lock-and-share\lock-pattern.png`（1440x900）
 - `D:\code\bmm\doc\design\app-lock-and-share\lock-pin.png`（1440x900）
 - `D:\code\bmm\doc\design\app-lock-and-share\share-modal.png`（1440x900，短口令 + 标签信息）

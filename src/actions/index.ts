@@ -16,6 +16,7 @@ import {
   UserTagController,
   aiProvidersConfigSchema,
   appLockConfigSchema,
+  appLockDisableSchema,
   appLockResetSchema,
   appLockVerifySchema,
   bookmarkPublishInputSchema,
@@ -148,7 +149,7 @@ export const actUpdateUserPreferences = make(UserPreferenceController.update, {
 
 /// 应用锁
 export const actSaveAppLock = make(AppLockController.save, { schema: appLockConfigSchema })
-export const actDisableAppLock = make(AppLockController.disable)
+export const actDisableAppLock = make(AppLockController.disable, { schema: appLockDisableSchema })
 export const actVerifyAppLock = make(AppLockController.verify, { schema: appLockVerifySchema })
 export const actResetAppLockWithPassword = make(AppLockController.resetWithPassword, {
   schema: appLockResetSchema,

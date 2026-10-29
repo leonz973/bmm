@@ -3,7 +3,7 @@
 import { actDisableAppLock, actSaveAppLock } from '@/actions'
 import AppLockPatternPad from '@/components/app-lock/AppLockPatternPad'
 import AppLockPinPad from '@/components/app-lock/AppLockPinPad'
-import MyModal from '@/components/MyModal'
+import ReInput from '@/components/re-export/ReInput'
 import type { AppLockMethod, AppLockSettings } from '@/controllers'
 import { runAction } from '@/utils/client'
 import { IconNames } from '@cfg'
@@ -56,9 +56,16 @@ export default function AppLockSettings(props: Props) {
 
   const [disableOpen, setDisableOpen] = useState(false)
   const [disabling, setDisabling] = useState(false)
+  const [disableMode, setDisableMode] = useState<'lock' | 'password'>('lock')
+  const [disablePattern, setDisablePattern] = useState<number[]>([])
+  const [disablePin, setDisablePin] = useState('')
+  const [disableSecret, setDisableSecret] = useState('')
+  const [disablePassword, setDisablePassword] = useState('')
+  const [disableError, setDisableError] = useState('')
 
   const enabledMethodLabel = settings.method === 'pin' ? '数字密码' : '九宫格'
   const draftMethodLabel = method === 'pin' ? '数字密码' : '九宫格'
+  const disableLockMethod: AppLockMethod = settings.method === 'pin' ? 'pin' : 'pattern'
 
   function resetDraft(nextMethod: AppLockMethod) {
     setMethod(nextMethod)
@@ -82,7 +89,26 @@ export default function AppLockSettings(props: Props) {
   function handleSwitchChange(selected: boolean) {
     if (saving || disabling) return
     if (selected) openSetup()
-    else setDisableOpen(true)
+    else openDisable()
+  }
+
+  function openDisable() {
+    setDisableMode('lock')
+    setDisablePattern([])
+    setDisablePin('')
+    setDisableSecret('')
+    setDisablePassword('')
+    setDisableError('')
+    setDisableOpen(true)
+  }
+
+  function changeDisableMode(mode: 'lock' | 'password') {
+    setDisableMode(mode)
+    setDisablePattern([])
+    setDisablePin('')
+    setDisableSecret('')
+    setDisablePassword('')
+    setDisableError('')
   }
 
   function handleNextStep() {
@@ -157,17 +183,39 @@ export default function AppLockSettings(props: Props) {
 
   async function handleDisable() {
     if (disabling) return
+    if (disableMode === 'lock' && !disableSecret) {
+      setDisableError('请先输入应用锁密码')
+      return
+    }
+    if (disableMode === 'password' && !disablePassword) {
+      setDisableError('请输入账号密码')
+      return
+    }
+
     setDisabling(true)
-    const result = await runAction(actDisableAppLock(), {
-      okMsg: '应用锁已关闭',
-      onOk(data) {
-        setSettings(data)
-        setDisableOpen(false)
-        router.refresh()
-      },
-    })
+    setDisableError('')
+    const result = await runAction(
+      actDisableAppLock(
+        disableMode === 'password' ? { password: disablePassword } : { secret: disableSecret }
+      ),
+      {
+        okMsg: '应用锁已关闭',
+        onOk(data) {
+          setSettings(data)
+          setDisableOpen(false)
+          router.refresh()
+        },
+      }
+    )
+    if (!result.ok) {
+      setDisableError(result.message)
+      if (disableMode === 'lock') {
+        setDisablePattern([])
+        setDisablePin('')
+        setDisableSecret('')
+      }
+    }
     setDisabling(false)
-    if (!result.ok) return
   }
 
   return (
@@ -337,21 +385,135 @@ export default function AppLockSettings(props: Props) {
         </ModalContent>
       </Modal>
 
-      <MyModal
+      <Modal
         isOpen={disableOpen}
-        title="关闭应用锁"
+        onOpenChange={(open) => {
+          if (!open && !disabling) setDisableOpen(false)
+        }}
         isDismissable={!disabling}
         isKeyboardDismissDisabled={disabling}
-        onClose={() => {
-          if (!disabling) setDisableOpen(false)
-        }}
-        onOk={handleDisable}
-        okButtonProps={{ color: 'danger', isLoading: disabling }}
+        size="md"
+        backdrop="blur"
       >
-        <p className="text-default-500 text-sm leading-6">
-          关闭后，进入个人空间与后台将不再需要验证。确定要关闭应用锁吗？
-        </p>
-      </MyModal>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader>关闭应用锁</ModalHeader>
+              <ModalBody>
+                <p className="text-default-500 text-sm leading-6">
+                  关闭后，进入个人空间与后台将不再需要验证。为确认是本人操作，请验证应用锁密码或账号密码。
+                </p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    size="sm"
+                    variant={disableMode === 'lock' ? 'flat' : 'light'}
+                    color={disableMode === 'lock' ? 'primary' : 'default'}
+                    isDisabled={disabling}
+                    onPress={() => changeDisableMode('lock')}
+                  >
+                    应用锁密码
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={disableMode === 'password' ? 'flat' : 'light'}
+                    color={disableMode === 'password' ? 'primary' : 'default'}
+                    isDisabled={disabling}
+                    onPress={() => changeDisableMode('password')}
+                  >
+                    账号密码
+                  </Button>
+                </div>
+
+                {disableMode === 'lock' ? (
+                  <div className="space-y-3">
+                    <p className="text-default-500 text-center text-sm">
+                      {disableLockMethod === 'pin'
+                        ? '请输入当前 4 位数字密码'
+                        : '请绘制当前九宫格图案'}
+                    </p>
+                    {disableLockMethod === 'pin' ? (
+                      <AppLockPinPad
+                        value={disablePin}
+                        onChange={(value) => {
+                          setDisablePin(value)
+                          setDisableSecret(value)
+                          setDisableError('')
+                        }}
+                        onComplete={(value) => setDisableSecret(value)}
+                        disabled={disabling}
+                      />
+                    ) : (
+                      <AppLockPatternPad
+                        value={disablePattern}
+                        onChange={(value) => {
+                          setDisablePattern(value)
+                          setDisableError('')
+                        }}
+                        onComplete={(value) => {
+                          if (value.length < 4) {
+                            setDisableError('请至少连接 4 个不重复的点')
+                            setDisablePattern([])
+                            setDisableSecret('')
+                            return
+                          }
+                          setDisableSecret(value.join(','))
+                          setDisableError('')
+                        }}
+                        disabled={disabling}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <ReInput
+                    label="账号密码"
+                    type="password"
+                    autoComplete="current-password"
+                    value={disablePassword}
+                    isDisabled={disabling}
+                    onValueChange={(value) => {
+                      setDisablePassword(value)
+                      setDisableError('')
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void handleDisable()
+                      }
+                    }}
+                  />
+                )}
+
+                <div className="min-h-5 text-center" aria-live="polite">
+                  {disabling ? (
+                    <span className="text-default-500 text-sm">正在验证…</span>
+                  ) : disableError ? (
+                    <span role="alert" className="text-danger text-sm">
+                      {disableError}
+                    </span>
+                  ) : null}
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" isDisabled={disabling} onPress={onClose}>
+                  取消
+                </Button>
+                <Button
+                  color="danger"
+                  isLoading={disabling}
+                  isDisabled={
+                    (disableMode === 'lock' && !disableSecret) ||
+                    (disableMode === 'password' && !disablePassword)
+                  }
+                  onPress={handleDisable}
+                >
+                  确认关闭
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </>
   )
 }

@@ -17,6 +17,7 @@
 | 长时间未使用 | 前端 `AppLockIdleGuard` 记录最近活动（localStorage 按 userId 隔离），30 分钟无操作调用 `actLockApp` 并刷新；滚轮/滚动/触摸/键盘均算活动 |
 | 强制拦截 | `src/app/user/layout.tsx` 与 `src/app/admin/layout.tsx` 在查询 tags/bookmarks 之前调用 `getGateState`，锁定时只渲染 `AppLockScreen` |
 | 忘记密码 | 锁屏内可用当前账号密码关闭应用锁（`actResetAppLockWithPassword`） |
+| 关闭应用锁 | 在偏好设置中关闭时必须验证当前应用锁密码，或改用账号密码验证 |
 | 退出登录 | `NavUser` 退出前清理解锁 Cookie，重新登录仍需验证应用锁 |
 
 ### 书签分享
@@ -38,6 +39,7 @@
 | 文件 | 内容 |
 | --- | --- |
 | `settings-lock-light.png` / `settings-lock-dark.png` | 偏好设置中的应用锁卡片（明/暗） |
+| `app-lock-disable-modal.png` | 关闭应用锁前的身份验证（应用锁密码或账号密码） |
 | `lock-pattern.png` / `lock-pin.png` | 九宫格锁屏 / 数字密码锁屏 |
 | `share-modal.png` | 分享口令弹窗（含书签与标签信息） |
 | `share-clipboard-dialog.png` | 读取剪贴板后自动弹出的导入提示 |
